@@ -1,0 +1,66 @@
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getBetById } from "@/lib/queries/bets";
+import { BetDetail } from "@/components/bet/BetDetail";
+import { ResolutionPanel } from "@/components/bet/ResolutionPanel";
+import { InviteSharePanel } from "@/components/bet/InviteSharePanel";
+import { cancelBet } from "@/lib/actions/bets";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+
+interface Props {
+  params: Promise<{ betId: string }>;
+}
+
+export default async function BetDetailPage({ params }: Props) {
+  const { betId } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const bet = await getBetById(betId);
+  if (!bet) notFound();
+
+  // Verify user is a participant
+  const isParticipant = bet.bet_participants.some((p) => p.user_id === user.id);
+  if (!isParticipant) {
+    // They may have the invite link — redirect there
+    redirect(`/bet/${bet.invite_code}`);
+  }
+
+  const canCancel = bet.status === "open" && bet.creator_id === user.id;
+
+  return (
+    <div className="max-w-lg mx-auto space-y-6">
+      <BetDetail bet={bet} currentUserId={user.id} />
+
+      <Separator />
+
+      {/* Invite panel — show while waiting for opponent */}
+      {bet.status === "open" && (
+        <InviteSharePanel inviteCode={bet.invite_code} />
+      )}
+
+      {/* Resolution panel */}
+      {(bet.status === "active" || bet.status === "resolving" || bet.status === "resolved" || bet.status === "stuck") && (
+        <ResolutionPanel bet={bet} currentUserId={user.id} />
+      )}
+
+      {/* Cancel */}
+      {canCancel && (
+        <form
+          action={async () => {
+            "use server";
+            await cancelBet(betId);
+          }}
+        >
+          <Button type="submit" variant="outline" className="text-destructive hover:text-destructive w-full">
+            Cancel Bet
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
