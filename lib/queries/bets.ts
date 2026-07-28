@@ -4,6 +4,20 @@ import type { BetWithDetails, BetWithParticipants } from "@/lib/types";
 export async function getBetsForUser(userId: string): Promise<BetWithParticipants[]> {
   const supabase = await createClient();
 
+  // PostgREST can't parse a filter on an embedded (bet_participants) column
+  // inside .or() against the top-level bets table, so look up the bet ids
+  // the user participates in (creator included -- the creation RPC always
+  // adds them as a participant too) first, then fetch the full rows.
+  const { data: participantRows, error: participantErr } = await supabase
+    .from("bet_participants")
+    .select("bet_id")
+    .eq("user_id", userId);
+
+  if (participantErr) throw participantErr;
+
+  const betIds = participantRows.map((p) => p.bet_id);
+  if (betIds.length === 0) return [];
+
   const { data, error } = await supabase
     .from("bets")
     .select(`
@@ -13,14 +27,11 @@ export async function getBetsForUser(userId: string): Promise<BetWithParticipant
         profiles (*)
       )
     `)
-    .or(
-      `creator_id.eq.${userId},bet_participants.user_id.eq.${userId}`
-    )
+    .in("id", betIds)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
 
-  // Filter to only bets where user is actually a participant (RLS handles this too)
   const bets = (data ?? []) as BetWithParticipants[];
 
   // Check-on-read expiry
