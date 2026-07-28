@@ -45,6 +45,18 @@ export default function SignupForm() {
     router.refresh();
   }
 
+  async function handleGoogleSignIn() {
+    setError(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirect)}`,
+      },
+    });
+    if (error) setError(error.message);
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -112,6 +124,21 @@ export default function SignupForm() {
             {loading ? "Creating account…" : "Create Account"}
           </Button>
         </form>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">or</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full font-bold"
+          onClick={handleGoogleSignIn}
+        >
+          Continue with Google
+        </Button>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Already have an account?{" "}

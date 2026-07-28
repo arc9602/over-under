@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +48,9 @@ export function UserAvatarMenu({ profile }: UserAvatarMenuProps) {
           <p className="text-sm font-medium">{profile.display_name ?? profile.username}</p>
           <p className="text-xs text-muted-foreground">@{profile.username}</p>
         </div>
+        <DropdownMenuItem render={<Link href="/settings" />} className="cursor-pointer">
+          Settings
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
           Sign Out
