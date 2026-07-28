@@ -38,11 +38,12 @@ export default function LoginForm() {
 
   async function handleGoogleSignIn() {
     setError(null);
+    document.cookie = `oauth_redirect=${redirect}; path=/; max-age=600; SameSite=Lax`;
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirect)}`,
+        redirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
     if (error) setError(error.message);
