@@ -14,10 +14,11 @@ interface WagerFormProps {
   maxWager: number | null;
   /** If the user already has a wager on this bet, lock the side and just let them add more. */
   existingSide?: "a" | "b";
+  existingAmount?: number;
 }
 
 export function WagerForm({
-  identifier, sideALabel, sideBLabel, minWager, maxWager, existingSide,
+  identifier, sideALabel, sideBLabel, minWager, maxWager, existingSide, existingAmount = 0,
 }: WagerFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +37,19 @@ export function WagerForm({
     });
   }
 
-  const limitsText = [
-    minWager != null ? `min $${minWager.toFixed(2)}` : null,
-    maxWager != null ? `max $${maxWager.toFixed(2)}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // min/max apply to the cumulative wager, so for a top-up the remaining
+  // room is what's left, not the raw bet-level limits.
+  const remainingMax = maxWager != null ? Math.max(0, maxWager - existingAmount) : undefined;
+  const limitsText = existingSide
+    ? maxWager != null
+      ? `up to $${remainingMax!.toFixed(2)} more (max $${maxWager.toFixed(2)} total)`
+      : ""
+    : [
+        minWager != null ? `min $${minWager.toFixed(2)}` : null,
+        maxWager != null ? `max $${maxWager.toFixed(2)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,8 +80,8 @@ export function WagerForm({
             name="amount"
             type="number"
             placeholder="20.00"
-            min={minWager ?? 0.01}
-            max={maxWager ?? undefined}
+            min={0.01}
+            max={existingSide ? remainingMax : maxWager ?? undefined}
             step="0.01"
             required
             className="pl-6"

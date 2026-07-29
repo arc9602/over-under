@@ -57,6 +57,7 @@ export default async function BetDetailPage({ params }: Props) {
           minWager={bet.min_wager}
           maxWager={bet.max_wager}
           existingSide={myParticipation?.side}
+          existingAmount={myParticipation?.amount}
         />
       )}
 
