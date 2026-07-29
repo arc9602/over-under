@@ -5,6 +5,7 @@ import { getNetIouForBet } from "@/lib/queries/balances";
 import { BetDetail } from "@/components/bet/BetDetail";
 import { ResolutionPanel } from "@/components/bet/ResolutionPanel";
 import { InviteSharePanel } from "@/components/bet/InviteSharePanel";
+import { WagerForm } from "@/components/bet/WagerForm";
 import { cancelBet, lockBet } from "@/lib/actions/bets";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -25,14 +26,15 @@ export default async function BetDetailPage({ params }: Props) {
   if (!bet) notFound();
 
   const isCreator = bet.creator_id === user.id;
-  const isParticipant = bet.bet_participants.some((p) => p.user_id === user.id);
-  if (!isParticipant && !isCreator) {
+  const myParticipation = bet.bet_participants.find((p) => p.user_id === user.id);
+  if (!myParticipation && !isCreator) {
     // They may have the invite link — redirect there
     redirect(`/bet/${bet.invite_code}`);
   }
 
   const canCancel = isCreator && (bet.status === "open" || bet.status === "active");
   const canLock = isCreator && bet.status === "active";
+  const canWager = bet.status === "open" || bet.status === "active";
 
   const netIou = bet.status === "resolved" ? await getNetIouForBet(betId, user.id) : undefined;
 
@@ -45,6 +47,17 @@ export default async function BetDetailPage({ params }: Props) {
       {/* Invite panel — still accepting wagers */}
       {(bet.status === "open" || bet.status === "active") && (
         <InviteSharePanel inviteCode={bet.invite_code} />
+      )}
+
+      {canWager && (
+        <WagerForm
+          identifier={{ betId }}
+          sideALabel={bet.side_a_label}
+          sideBLabel={bet.side_b_label}
+          minWager={bet.min_wager}
+          maxWager={bet.max_wager}
+          existingSide={myParticipation?.side}
+        />
       )}
 
       {canLock && (

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { BetStatusBadge } from "@/components/bet/BetStatusBadge";
 import { CountdownTimer } from "@/components/bet/CountdownTimer";
-import { JoinBetForm } from "@/components/bet/JoinBetForm";
+import { WagerForm } from "@/components/bet/WagerForm";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getSideTotals } from "@/lib/utils/betPool";
 
@@ -101,8 +101,8 @@ export default async function InviteLandingPage({ params }: Props) {
 
         {canJoin ? (
           user ? (
-            <JoinBetForm
-              inviteCode={inviteCode}
+            <WagerForm
+              identifier={{ inviteCode }}
               sideALabel={bet.side_a_label}
               sideBLabel={bet.side_b_label}
               minWager={bet.min_wager}
