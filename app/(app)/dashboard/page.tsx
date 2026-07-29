@@ -11,7 +11,7 @@ import type { BetStatus, BetWithParticipants } from "@/lib/types";
 const TABS: { value: string; label: string; statuses: BetStatus[] | "all" }[] = [
   { value: "all", label: "All", statuses: "all" },
   { value: "open", label: "Open", statuses: ["open"] },
-  { value: "active", label: "Live", statuses: ["active", "resolving"] },
+  { value: "active", label: "Live", statuses: ["active", "locked", "resolving"] },
   { value: "resolved", label: "Settled", statuses: ["resolved", "cancelled", "expired", "stuck"] },
 ];
 

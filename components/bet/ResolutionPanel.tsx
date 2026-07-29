@@ -4,27 +4,24 @@ import { useState, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { proposeResolution, confirmResolution, disputeResolution } from "@/lib/actions/resolutions";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { getPariMutuelPreview } from "@/lib/utils/betPool";
 import type { BetWithDetails } from "@/lib/types";
 
 interface ResolutionPanelProps {
   bet: BetWithDetails;
   currentUserId: string;
+  netIou?: number;
 }
 
-export function ResolutionPanel({ bet, currentUserId }: ResolutionPanelProps) {
+export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const pendingResolution = bet.resolutions.find((r) => r.status === "pending");
-  const userSide = bet.bet_participants.find((p) => p.user_id === currentUserId)?.side;
-  const sideA = bet.bet_participants.find((p) => p.side === "a");
-  const sideB = bet.bet_participants.find((p) => p.side === "b");
 
-  function getSideName(side: "a" | "b") {
-    const p = side === "a" ? sideA : sideB;
-    const label = side === "a" ? bet.side_a_label : bet.side_b_label;
-    const name = p?.profiles?.display_name ?? p?.profiles?.username ?? "Unknown";
-    return { label, name };
+  function sideLabel(side: "a" | "b") {
+    return side === "a" ? bet.side_a_label : bet.side_b_label;
   }
 
   function handlePropose(winnerSide: "a" | "b") {
@@ -56,17 +53,19 @@ export function ResolutionPanel({ bet, currentUserId }: ResolutionPanelProps) {
   if (bet.status === "resolved") {
     const confirmedResolution = bet.resolutions.find((r) => r.status === "confirmed");
     if (confirmedResolution) {
-      const { label, name } = getSideName(confirmedResolution.proposed_winner_side);
-      const youWon = bet.bet_participants.find(
-        (p) => p.side === confirmedResolution.proposed_winner_side && p.user_id === currentUserId
-      );
+      const label = sideLabel(confirmedResolution.proposed_winner_side);
+      const net = netIou ?? 0;
+      const won = net > 0;
+      const broke_even = net === 0;
       return (
-        <Card className={youWon ? "border-emerald-500/50 bg-emerald-500/5" : "border-destructive/30 bg-destructive/5"}>
+        <Card className={won ? "border-emerald-500/50 bg-emerald-500/5" : broke_even ? "" : "border-destructive/30 bg-destructive/5"}>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl mb-1">{youWon ? "🏆" : "💸"}</p>
-            <p className="font-black text-lg">{youWon ? "You won!" : "You lost"}</p>
+            <p className="text-2xl mb-1">{won ? "🏆" : broke_even ? "🤝" : "💸"}</p>
+            <p className="font-black text-lg">
+              {broke_even ? "Break-even" : won ? `You net +${formatCurrency(net)}` : `You net −${formatCurrency(Math.abs(net))}`}
+            </p>
             <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium text-foreground">{label}</span> won — {name}
+              <span className="font-medium text-foreground">{label}</span> won
             </p>
           </CardContent>
         </Card>
@@ -87,14 +86,14 @@ export function ResolutionPanel({ bet, currentUserId }: ResolutionPanelProps) {
     );
   }
 
-  if (bet.status === "active") {
+  if (bet.status === "locked") {
     return (
       <Card>
         <CardContent className="p-4">
           <p className="text-xs font-black tracking-widest text-muted-foreground mb-3">WHO WON?</p>
           <div className="grid grid-cols-2 gap-2">
             {(["a", "b"] as const).map((side) => {
-              const { label, name } = getSideName(side);
+              const preview = getPariMutuelPreview(bet.bet_participants, side, currentUserId);
               return (
                 <Button
                   key={side}
@@ -103,8 +102,14 @@ export function ResolutionPanel({ bet, currentUserId }: ResolutionPanelProps) {
                   onClick={() => handlePropose(side)}
                   disabled={isPending}
                 >
-                  <span className="font-bold text-sm">{label}</span>
-                  <span className="text-xs text-muted-foreground">{name}</span>
+                  <span className="font-bold text-sm">{sideLabel(side)}</span>
+                  {preview.isParticipant && (
+                    <span className={`text-xs ${preview.profit >= 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                      {preview.profit >= 0
+                        ? `You'd net +${formatCurrency(preview.profit)}`
+                        : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
+                    </span>
+                  )}
                 </Button>
               );
             })}
@@ -116,7 +121,11 @@ export function ResolutionPanel({ bet, currentUserId }: ResolutionPanelProps) {
   }
 
   if (bet.status === "resolving" && pendingResolution) {
-    const { label, name } = getSideName(pendingResolution.proposed_winner_side);
+    const label = sideLabel(pendingResolution.proposed_winner_side);
+    const proposerProfile = bet.bet_participants.find(
+      (p) => p.user_id === pendingResolution.proposed_by
+    )?.profiles;
+    const proposerName = proposerProfile?.display_name ?? proposerProfile?.username ?? "Someone";
     const isProposer = pendingResolution.proposed_by === currentUserId;
     const disputeCount = bet.resolutions.filter((r) => r.status === "disputed").length;
 
@@ -126,9 +135,9 @@ export function ResolutionPanel({ bet, currentUserId }: ResolutionPanelProps) {
           <CardContent className="p-4">
             <p className="text-xs font-black tracking-widest text-amber-400 mb-2">AWAITING CONFIRMATION</p>
             <p className="text-sm">
-              You proposed <span className="font-bold">{label}</span> ({name}) as the winner.
+              You proposed <span className="font-bold">{label}</span> as the winner.
             </p>
-            <p className="text-xs text-muted-foreground mt-1">Waiting for the other player to confirm.</p>
+            <p className="text-xs text-muted-foreground mt-1">Waiting for another participant to confirm.</p>
             {error && <p className="text-sm text-destructive mt-2">{error}</p>}
           </CardContent>
         </Card>
@@ -140,7 +149,7 @@ export function ResolutionPanel({ bet, currentUserId }: ResolutionPanelProps) {
         <CardContent className="p-4">
           <p className="text-xs font-black tracking-widest text-amber-400 mb-2">RESOLUTION PROPOSED</p>
           <p className="text-sm mb-4">
-            Your opponent says <span className="font-bold">{label}</span> ({name}) won. Do you agree?
+            {proposerName} says <span className="font-bold">{label}</span> won. Do you agree?
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={handleConfirm} disabled={isPending} className="font-bold">

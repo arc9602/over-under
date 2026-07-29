@@ -14,6 +14,23 @@ export async function getIouLedger(userId: string): Promise<IouEntry[]> {
   return data ?? [];
 }
 
+export async function getNetIouForBet(betId: string, userId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("iou_ledger")
+    .select("creditor_id, debtor_id, amount")
+    .eq("bet_id", betId)
+    .or(`creditor_id.eq.${userId},debtor_id.eq.${userId}`);
+
+  if (error) throw error;
+
+  return (data ?? []).reduce(
+    (net, iou) => net + (iou.creditor_id === userId ? iou.amount : -iou.amount),
+    0
+  );
+}
+
 export async function getNetBalancesForUser(userId: string): Promise<NetBalance[]> {
   const supabase = await createClient();
 

@@ -11,10 +11,12 @@ export type IouEntry = Database["public"]["Tables"]["iou_ledger"]["Row"];
 export type Settlement = Database["public"]["Tables"]["settlements"]["Row"];
 
 export type BetWithParticipants = Bet & {
+  creator: Profile;
   bet_participants: (BetParticipant & { profiles: Profile })[];
 };
 
 export type BetWithDetails = Bet & {
+  creator: Profile;
   bet_participants: (BetParticipant & { profiles: Profile })[];
   resolutions: Resolution[];
 };

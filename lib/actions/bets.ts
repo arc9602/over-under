@@ -5,14 +5,26 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-const createBetSchema = z.object({
-  title: z.string().min(3).max(200),
-  description: z.string().max(500).optional(),
-  sideALabel: z.string().min(1).max(50).default("Yes"),
-  sideBLabel: z.string().min(1).max(50).default("No"),
-  stake: z.coerce.number().positive().max(100000),
-  deadline: z.string().optional(),
-});
+const createBetSchema = z
+  .object({
+    title: z.string().min(3).max(200),
+    description: z.string().max(500).optional(),
+    sideALabel: z.string().min(1).max(50).default("Yes"),
+    sideBLabel: z.string().min(1).max(50).default("No"),
+    minWager: z.coerce.number().positive().max(100000).optional(),
+    maxWager: z.coerce.number().positive().max(100000).optional(),
+    deadline: z.string().optional(),
+    creatorSide: z.enum(["a", "b"]).optional(),
+    creatorAmount: z.coerce.number().positive().max(100000).optional(),
+  })
+  .refine((d) => (d.minWager == null || d.maxWager == null) || d.minWager <= d.maxWager, {
+    message: "Minimum wager can't exceed maximum wager",
+    path: ["maxWager"],
+  })
+  .refine((d) => Boolean(d.creatorSide) === Boolean(d.creatorAmount), {
+    message: "Choose a side and an amount to wager now, or leave both blank",
+    path: ["creatorAmount"],
+  });
 
 export async function createBet(formData: FormData) {
   const supabase = await createClient();
@@ -24,83 +36,108 @@ export async function createBet(formData: FormData) {
     description: formData.get("description"),
     sideALabel: formData.get("sideALabel"),
     sideBLabel: formData.get("sideBLabel"),
-    stake: formData.get("stake"),
+    minWager: formData.get("minWager") || undefined,
+    maxWager: formData.get("maxWager") || undefined,
     deadline: formData.get("deadline") || undefined,
+    creatorSide: formData.get("creatorSide") || undefined,
+    creatorAmount: formData.get("creatorAmount") || undefined,
   });
 
   if (!parsed.success) {
     return { error: "Invalid form data", details: parsed.error.flatten() };
   }
 
-  const { title, description, sideALabel, sideBLabel, stake, deadline } = parsed.data;
+  const {
+    title, description, sideALabel, sideBLabel, minWager, maxWager, deadline,
+    creatorSide, creatorAmount,
+  } = parsed.data;
+
+  const { data: bet, error } = await supabase
+    .from("bets")
+    .insert({
+      title,
+      description: description ?? null,
+      side_a_label: sideALabel,
+      side_b_label: sideBLabel,
+      min_wager: minWager ?? null,
+      max_wager: maxWager ?? null,
+      deadline: deadline ? new Date(deadline).toISOString() : null,
+      creator_id: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  if (creatorSide && creatorAmount) {
+    const serviceClient = await createServiceClient();
+    await serviceClient.rpc("place_wager", {
+      p_bet_id: bet.id,
+      p_user_id: user.id,
+      p_side: creatorSide,
+      p_amount: creatorAmount,
+    });
+    // Non-fatal if this fails (e.g. amount outside min/max) -- the bet
+    // still exists and the creator can wager again from its own page.
+  }
+
+  revalidatePath("/dashboard");
+  redirect(`/bets/${bet.id}`);
+}
+
+export async function placeWager(
+  identifier: { betId: string } | { inviteCode: string },
+  side: "a" | "b",
+  amount: number
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const redirectTarget = "inviteCode" in identifier ? `/bet/${identifier.inviteCode}` : `/bets/${identifier.betId}`;
+  if (!user) redirect(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
 
   const serviceClient = await createServiceClient();
-  const { data, error } = await serviceClient.rpc("create_bet_with_participant", {
-    p_title: title,
-    p_description: description ?? null,
-    p_side_a_label: sideALabel,
-    p_side_b_label: sideBLabel,
-    p_stake: stake,
-    p_deadline: deadline ? new Date(deadline).toISOString() : null,
-    p_creator_id: user.id,
+  const { data: bet } = await serviceClient
+    .from("bets")
+    .select("id")
+    .match("betId" in identifier ? { id: identifier.betId } : { invite_code: identifier.inviteCode })
+    .single();
+
+  if (!bet) return { error: "Bet not found" };
+
+  const { error } = await serviceClient.rpc("place_wager", {
+    p_bet_id: bet.id,
+    p_user_id: user.id,
+    p_side: side,
+    p_amount: amount,
   });
 
   if (error) return { error: error.message };
 
-  const result = Array.isArray(data) ? data[0] : data;
   revalidatePath("/dashboard");
-  redirect(`/bets/${result.bet_id}`);
+  revalidatePath(`/bets/${bet.id}`);
+  redirect(`/bets/${bet.id}`);
 }
 
-export async function joinBet(inviteCode: string) {
+export async function lockBet(betId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?redirect=/bet/${inviteCode}`);
+  if (!user) redirect("/login");
 
-  const serviceClient = await createServiceClient();
-
-  // Fetch the bet
-  const { data: bet, error: betError } = await serviceClient
+  const { data, error } = await supabase
     .from("bets")
-    .select("id, status")
-    .eq("invite_code", inviteCode)
-    .single();
-
-  if (betError || !bet) return { error: "Bet not found" };
-  if (bet.status !== "open") return { error: "This bet is no longer accepting participants" };
-
-  // Check if already a participant
-  const { data: existing } = await serviceClient
-    .from("bet_participants")
+    .update({ status: "locked" })
+    .eq("id", betId)
+    .eq("creator_id", user.id)
+    .eq("status", "active")
     .select("id")
-    .eq("bet_id", bet.id)
-    .eq("user_id", user.id)
     .single();
 
-  if (existing) {
-    redirect(`/bets/${bet.id}`);
+  if (error || !data) {
+    return { error: "Unable to lock this bet -- it must be funded on both sides and you must be the creator" };
   }
 
-  // Join as side B
-  const { error: joinError } = await serviceClient
-    .from("bet_participants")
-    .insert({ bet_id: bet.id, user_id: user.id, side: "b" });
-
-  if (joinError) {
-    if (joinError.code === "23505") {
-      return { error: "Someone just joined this bet ahead of you" };
-    }
-    return { error: joinError.message };
-  }
-
-  // Flip status to active
-  await serviceClient
-    .from("bets")
-    .update({ status: "active" })
-    .eq("id", bet.id);
-
-  revalidatePath("/dashboard");
-  redirect(`/bets/${bet.id}`);
+  revalidatePath(`/bets/${betId}`);
+  return { success: true };
 }
 
 export async function cancelBet(betId: string) {
@@ -113,7 +150,7 @@ export async function cancelBet(betId: string) {
     .update({ status: "cancelled" })
     .eq("id", betId)
     .eq("creator_id", user.id)
-    .eq("status", "open");
+    .in("status", ["open", "active"]);
 
   if (error) return { error: error.message };
 

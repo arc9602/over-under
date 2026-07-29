@@ -6,22 +6,30 @@ export async function getBetsForUser(userId: string): Promise<BetWithParticipant
 
   // PostgREST can't parse a filter on an embedded (bet_participants) column
   // inside .or() against the top-level bets table, so look up the bet ids
-  // the user participates in (creator included -- the creation RPC always
-  // adds them as a participant too) first, then fetch the full rows.
-  const { data: participantRows, error: participantErr } = await supabase
-    .from("bet_participants")
-    .select("bet_id")
-    .eq("user_id", userId);
+  // the user is involved with first, then fetch the full rows. A creator
+  // no longer automatically wagers on their own bet, so both creator_id
+  // and bet_participants membership need to be checked separately.
+  const [participantRows, createdRows] = await Promise.all([
+    supabase.from("bet_participants").select("bet_id").eq("user_id", userId),
+    supabase.from("bets").select("id").eq("creator_id", userId),
+  ]);
 
-  if (participantErr) throw participantErr;
+  if (participantRows.error) throw participantRows.error;
+  if (createdRows.error) throw createdRows.error;
 
-  const betIds = participantRows.map((p) => p.bet_id);
+  const betIds = Array.from(
+    new Set([
+      ...participantRows.data.map((p) => p.bet_id),
+      ...createdRows.data.map((b) => b.id),
+    ])
+  );
   if (betIds.length === 0) return [];
 
   const { data, error } = await supabase
     .from("bets")
     .select(`
       *,
+      creator:profiles!bets_creator_id_fkey (*),
       bet_participants (
         *,
         profiles (*)
@@ -55,6 +63,7 @@ export async function getBetById(betId: string): Promise<BetWithDetails | null> 
     .from("bets")
     .select(`
       *,
+      creator:profiles!bets_creator_id_fkey (*),
       bet_participants (
         *,
         profiles (*)
@@ -77,6 +86,7 @@ export async function getBetByInviteCode(inviteCode: string) {
     .from("bets")
     .select(`
       *,
+      creator:profiles!bets_creator_id_fkey (*),
       bet_participants (
         *,
         profiles (*)

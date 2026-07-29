@@ -1,10 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getBetById } from "@/lib/queries/bets";
+import { getNetIouForBet } from "@/lib/queries/balances";
 import { BetDetail } from "@/components/bet/BetDetail";
 import { ResolutionPanel } from "@/components/bet/ResolutionPanel";
 import { InviteSharePanel } from "@/components/bet/InviteSharePanel";
-import { cancelBet } from "@/lib/actions/bets";
+import { cancelBet, lockBet } from "@/lib/actions/bets";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -23,14 +24,17 @@ export default async function BetDetailPage({ params }: Props) {
   const bet = await getBetById(betId);
   if (!bet) notFound();
 
-  // Verify user is a participant
+  const isCreator = bet.creator_id === user.id;
   const isParticipant = bet.bet_participants.some((p) => p.user_id === user.id);
-  if (!isParticipant) {
+  if (!isParticipant && !isCreator) {
     // They may have the invite link — redirect there
     redirect(`/bet/${bet.invite_code}`);
   }
 
-  const canCancel = bet.status === "open" && bet.creator_id === user.id;
+  const canCancel = isCreator && (bet.status === "open" || bet.status === "active");
+  const canLock = isCreator && bet.status === "active";
+
+  const netIou = bet.status === "resolved" ? await getNetIouForBet(betId, user.id) : undefined;
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -38,14 +42,27 @@ export default async function BetDetailPage({ params }: Props) {
 
       <Separator />
 
-      {/* Invite panel — show while waiting for opponent */}
-      {bet.status === "open" && (
+      {/* Invite panel — still accepting wagers */}
+      {(bet.status === "open" || bet.status === "active") && (
         <InviteSharePanel inviteCode={bet.invite_code} />
       )}
 
+      {canLock && (
+        <form
+          action={async () => {
+            "use server";
+            await lockBet(betId);
+          }}
+        >
+          <Button type="submit" className="w-full font-bold">
+            Lock Bet &amp; Start Resolution
+          </Button>
+        </form>
+      )}
+
       {/* Resolution panel */}
-      {(bet.status === "active" || bet.status === "resolving" || bet.status === "resolved" || bet.status === "stuck") && (
-        <ResolutionPanel bet={bet} currentUserId={user.id} />
+      {(bet.status === "locked" || bet.status === "resolving" || bet.status === "resolved" || bet.status === "stuck") && (
+        <ResolutionPanel bet={bet} currentUserId={user.id} netIou={netIou} />
       )}
 
       {/* Cancel */}

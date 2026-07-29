@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BetStatusBadge } from "./BetStatusBadge";
 import { CountdownTimer } from "./CountdownTimer";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { getSideTotals } from "@/lib/utils/betPool";
 import type { BetWithParticipants } from "@/lib/types";
 
 interface BetCardProps {
@@ -10,10 +11,10 @@ interface BetCardProps {
   currentUserId: string;
 }
 
-export function BetCard({ bet, currentUserId }: BetCardProps) {
-  const sideA = bet.bet_participants.find((p) => p.side === "a");
-  const sideB = bet.bet_participants.find((p) => p.side === "b");
-  const isCreator = bet.creator_id === currentUserId;
+export function BetCard({ bet }: BetCardProps) {
+  const sideA = getSideTotals(bet.bet_participants, "a");
+  const sideB = getSideTotals(bet.bet_participants, "b");
+  const totalPool = sideA.total + sideB.total;
 
   return (
     <Link href={`/bets/${bet.id}`}>
@@ -31,10 +32,12 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
               </div>
               <div className="flex items-center gap-3 mt-2">
                 <span className="text-xs text-muted-foreground">
-                  {sideA?.profiles?.display_name ?? sideA?.profiles?.username ?? "Open"}
+                  {sideA.count > 0 ? `${formatCurrency(sideA.total)} (${sideA.count})` : "Open"}
                   {" vs "}
-                  {sideB?.profiles?.display_name ?? sideB?.profiles?.username ?? (
-                    <span className="text-primary">Waiting for opponent</span>
+                  {sideB.count > 0 ? (
+                    `${formatCurrency(sideB.total)} (${sideB.count})`
+                  ) : (
+                    <span className="text-primary">Waiting for wagers</span>
                   )}
                 </span>
               </div>
@@ -42,7 +45,7 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
             <div className="flex flex-col items-end gap-2 shrink-0">
               <BetStatusBadge status={bet.status} />
               <span className="text-base font-black text-primary">
-                {formatCurrency(bet.stake)}
+                {formatCurrency(totalPool)}
               </span>
               {bet.deadline && bet.status !== "resolved" && bet.status !== "cancelled" && (
                 <CountdownTimer deadline={bet.deadline} />

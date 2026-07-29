@@ -41,7 +41,8 @@ export type Database = {
           description: string | null;
           side_a_label: string;
           side_b_label: string;
-          stake: number;
+          min_wager: number | null;
+          max_wager: number | null;
           currency: string;
           deadline: string | null;
           status: BetStatus;
@@ -56,7 +57,8 @@ export type Database = {
           description?: string | null;
           side_a_label?: string;
           side_b_label?: string;
-          stake: number;
+          min_wager?: number | null;
+          max_wager?: number | null;
           currency?: string;
           deadline?: string | null;
           status?: BetStatus;
@@ -71,7 +73,8 @@ export type Database = {
           description?: string | null;
           side_a_label?: string;
           side_b_label?: string;
-          stake?: number;
+          min_wager?: number | null;
+          max_wager?: number | null;
           currency?: string;
           deadline?: string | null;
           status?: BetStatus;
@@ -95,6 +98,7 @@ export type Database = {
           bet_id: string;
           user_id: string;
           side: "a" | "b";
+          amount: number;
           joined_at: string;
         };
         Insert: {
@@ -102,6 +106,7 @@ export type Database = {
           bet_id: string;
           user_id: string;
           side: "a" | "b";
+          amount: number;
           joined_at?: string;
         };
         Update: {
@@ -109,6 +114,7 @@ export type Database = {
           bet_id?: string;
           user_id?: string;
           side?: "a" | "b";
+          amount?: number;
           joined_at?: string;
         };
         Relationships: [
@@ -248,17 +254,14 @@ export type Database = {
         Args: { p_resolution_id: string; p_disputer_id: string };
         Returns: undefined;
       };
-      create_bet_with_participant: {
+      place_wager: {
         Args: {
-          p_title: string;
-          p_description: string | null;
-          p_side_a_label: string;
-          p_side_b_label: string;
-          p_stake: number;
-          p_deadline: string | null;
-          p_creator_id: string;
+          p_bet_id: string;
+          p_user_id: string;
+          p_side: "a" | "b";
+          p_amount: number;
         };
-        Returns: { bet_id: string; invite_code: string }[];
+        Returns: undefined;
       };
     };
     Enums: { [_ in never]: never };
@@ -269,6 +272,7 @@ export type Database = {
 export type BetStatus =
   | "open"
   | "active"
+  | "locked"
   | "resolving"
   | "resolved"
   | "cancelled"

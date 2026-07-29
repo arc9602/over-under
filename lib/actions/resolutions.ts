@@ -9,15 +9,15 @@ export async function proposeResolution(betId: string, winnerSide: "a" | "b") {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Verify bet is active
+  // Verify bet is locked (creator has cut off new wagers)
   const { data: bet } = await supabase
     .from("bets")
     .select("id, status")
     .eq("id", betId)
     .single();
 
-  if (!bet || bet.status !== "active") {
-    return { error: "Bet is not active" };
+  if (!bet || bet.status !== "locked") {
+    return { error: "Bet must be locked before proposing a resolution" };
   }
 
   const { error } = await supabase
