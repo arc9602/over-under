@@ -1,27 +1,44 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import type { Database } from "@/lib/types/database.types";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const cookieStore = await cookies();
-  // The OAuth (Google) flow can't reliably carry a nested ?redirect= query
-  // param through Google's consent screen and back, so it's passed via a
-  // short-lived cookie instead. Email-link flows (signup confirmation) don't
-  // go through that round-trip and still use the query param directly.
   const redirect =
     searchParams.get("redirect") ?? cookieStore.get("oauth_redirect")?.value ?? "/dashboard";
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      const response = NextResponse.redirect(`${origin}${redirect}`);
-      response.cookies.delete("oauth_redirect");
-      return response;
-    }
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  let response = NextResponse.redirect(`${origin}${redirect}`);
+
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  }
+
+  response.cookies.delete("oauth_redirect");
+  return response;
 }

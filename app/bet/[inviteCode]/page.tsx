@@ -109,20 +109,12 @@ export default async function InviteLandingPage({ params }: Props) {
               maxWager={bet.max_wager}
             />
           ) : (
-            <div className="space-y-3">
-              <Link
-                href={`/signup?redirect=/bet/${inviteCode}`}
-                className={buttonVariants({ className: "w-full font-black text-base py-6" })}
-              >
-                Sign Up to Wager
-              </Link>
-              <p className="text-center text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <Link href={`/login?redirect=/bet/${inviteCode}`} className="text-primary hover:underline">
-                  Sign in
-                </Link>
-              </p>
-            </div>
+            <Link
+              href={`/login?redirect=/bet/${inviteCode}`}
+              className={buttonVariants({ className: "w-full font-black text-base py-6" })}
+            >
+              Continue with Google to Wager
+            </Link>
           )
         ) : (
           <div className="text-center">

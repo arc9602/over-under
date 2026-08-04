@@ -28,14 +28,9 @@ export default async function LandingPage() {
           <p>💰 Track who owes what</p>
         </div>
 
-        <div className="flex gap-3 justify-center">
-          <Link href="/signup" className={buttonVariants({ className: "font-black px-8 py-6 text-base" })}>
-            Get Started
-          </Link>
-          <Link href="/login" className={buttonVariants({ variant: "outline", className: "font-bold px-6 py-6 text-base" })}>
-            Sign In
-          </Link>
-        </div>
+        <Link href="/login" className={buttonVariants({ className: "font-black px-8 py-6 text-base" })}>
+          Continue with Google
+        </Link>
       </div>
     </div>
   );
