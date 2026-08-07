@@ -175,10 +175,221 @@ export type Database = {
           }
         ];
       };
+      markets: {
+        Row: {
+          id: string;
+          invite_code: string;
+          title: string;
+          description: string | null;
+          yes_label: string;
+          no_label: string;
+          currency: string;
+          deadline: string | null;
+          max_contracts: number | null;
+          last_price: number | null;
+          status: MarketStatus;
+          creator_id: string;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          invite_code?: string;
+          title: string;
+          description?: string | null;
+          yes_label?: string;
+          no_label?: string;
+          currency?: string;
+          deadline?: string | null;
+          max_contracts?: number | null;
+          last_price?: number | null;
+          status?: MarketStatus;
+          creator_id: string;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          invite_code?: string;
+          title?: string;
+          description?: string | null;
+          yes_label?: string;
+          no_label?: string;
+          currency?: string;
+          deadline?: string | null;
+          max_contracts?: number | null;
+          last_price?: number | null;
+          status?: MarketStatus;
+          creator_id?: string;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "markets_creator_id_fkey";
+            columns: ["creator_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      market_orders: {
+        Row: {
+          id: string;
+          market_id: string;
+          user_id: string;
+          side: MarketSide;
+          limit_price: number;
+          quantity: number;
+          filled_quantity: number;
+          status: MarketOrderStatus;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          market_id: string;
+          user_id: string;
+          side: MarketSide;
+          limit_price: number;
+          quantity: number;
+          filled_quantity?: number;
+          status?: MarketOrderStatus;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          market_id?: string;
+          user_id?: string;
+          side?: MarketSide;
+          limit_price?: number;
+          quantity?: number;
+          filled_quantity?: number;
+          status?: MarketOrderStatus;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_orders_market_id_fkey";
+            columns: ["market_id"];
+            isOneToOne: false;
+            referencedRelation: "markets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_orders_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      market_fills: {
+        Row: {
+          id: string;
+          market_id: string;
+          yes_user_id: string;
+          no_user_id: string;
+          yes_price: number;
+          quantity: number;
+          yes_order_id: string | null;
+          no_order_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          market_id: string;
+          yes_user_id: string;
+          no_user_id: string;
+          yes_price: number;
+          quantity: number;
+          yes_order_id?: string | null;
+          no_order_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          market_id?: string;
+          yes_user_id?: string;
+          no_user_id?: string;
+          yes_price?: number;
+          quantity?: number;
+          yes_order_id?: string | null;
+          no_order_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_fills_market_id_fkey";
+            columns: ["market_id"];
+            isOneToOne: false;
+            referencedRelation: "markets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_fills_yes_user_id_fkey";
+            columns: ["yes_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_fills_no_user_id_fkey";
+            columns: ["no_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      market_resolutions: {
+        Row: {
+          id: string;
+          market_id: string;
+          proposed_by: string;
+          proposed_outcome: MarketSide;
+          confirmed_by: string | null;
+          status: ResolutionStatus;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          market_id: string;
+          proposed_by: string;
+          proposed_outcome: MarketSide;
+          confirmed_by?: string | null;
+          status?: ResolutionStatus;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          market_id?: string;
+          proposed_by?: string;
+          proposed_outcome?: MarketSide;
+          confirmed_by?: string | null;
+          status?: ResolutionStatus;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_resolutions_market_id_fkey";
+            columns: ["market_id"];
+            isOneToOne: false;
+            referencedRelation: "markets";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       iou_ledger: {
         Row: {
           id: string;
-          bet_id: string;
+          // Exactly one of bet_id / market_id is set (iou_ledger_source_chk).
+          bet_id: string | null;
+          market_id: string | null;
           creditor_id: string;
           debtor_id: string;
           amount: number;
@@ -188,7 +399,8 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          bet_id: string;
+          bet_id?: string | null;
+          market_id?: string | null;
           creditor_id: string;
           debtor_id: string;
           amount: number;
@@ -198,7 +410,8 @@ export type Database = {
         };
         Update: {
           id?: string;
-          bet_id?: string;
+          bet_id?: string | null;
+          market_id?: string | null;
           creditor_id?: string;
           debtor_id?: string;
           amount?: number;
@@ -212,6 +425,13 @@ export type Database = {
             columns: ["bet_id"];
             isOneToOne: false;
             referencedRelation: "bets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "iou_ledger_market_id_fkey";
+            columns: ["market_id"];
+            isOneToOne: false;
+            referencedRelation: "markets";
             referencedColumns: ["id"];
           }
         ];
@@ -263,6 +483,37 @@ export type Database = {
         };
         Returns: undefined;
       };
+      place_market_order: {
+        Args: {
+          p_market_id: string;
+          p_user_id: string;
+          p_side: MarketSide;
+          p_limit_price: number;
+          p_quantity: number;
+        };
+        // RETURNS TABLE, so PostgREST hands back an array of one row.
+        Returns: {
+          filled_qty: number;
+          resting_qty: number;
+          avg_price_cents: number | null;
+        }[];
+      };
+      cancel_market_order: {
+        Args: { p_order_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      lock_market: {
+        Args: { p_market_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      confirm_market_resolution: {
+        Args: { p_resolution_id: string; p_confirmer_id: string };
+        Returns: undefined;
+      };
+      dispute_market_resolution: {
+        Args: { p_resolution_id: string; p_disputer_id: string };
+        Returns: undefined;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
@@ -284,3 +535,15 @@ export type ResolutionStatus =
   | "confirmed"
   | "disputed"
   | "superseded";
+
+/**
+ * Markets deliberately reuse the bet status vocabulary so BetStatusBadge and
+ * the dashboard tab groupings work for both. The meanings shift slightly:
+ * `open` = no fills yet, `active` = has traded, `locked` = trading halted.
+ */
+export type MarketStatus = BetStatus;
+
+/** A contract side, and also the outcome a market resolves to. */
+export type MarketSide = "yes" | "no";
+
+export type MarketOrderStatus = "open" | "filled" | "cancelled";

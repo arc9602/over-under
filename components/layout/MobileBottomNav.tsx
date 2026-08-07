@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation";
 export function MobileBottomNav() {
   const pathname = usePathname();
 
+  // The "+" creates whatever you're currently looking at.
+  const inMarkets = pathname.startsWith("/markets");
+
   const links = [
     {
       href: "/dashboard",
@@ -18,7 +21,17 @@ export function MobileBottomNav() {
       ),
     },
     {
-      href: "/bets/new",
+      href: "/markets",
+      label: "Markets",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M3 17l6-6 4 4 8-8m0 0h-5m5 0v5" />
+        </svg>
+      ),
+    },
+    {
+      href: inMarkets ? "/markets/new" : "/bets/new",
       label: "New",
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

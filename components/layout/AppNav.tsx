@@ -14,8 +14,14 @@ export function AppNav({ profile }: AppNavProps) {
 
   const links = [
     { href: "/dashboard", label: "My Bets" },
+    { href: "/markets", label: "Markets" },
     { href: "/balances", label: "Balances" },
   ];
+
+  // The "+" button follows whichever section you're in.
+  const inMarkets = pathname.startsWith("/markets");
+  const newHref = inMarkets ? "/markets/new" : "/bets/new";
+  const newLabel = inMarkets ? "+ New Market" : "+ New Bet";
 
   return (
     <header className="border-b border-border bg-card sticky top-0 z-50">
@@ -42,10 +48,10 @@ export function AppNav({ profile }: AppNavProps) {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/bets/new"
+            href={newHref}
             className="hidden sm:flex items-center gap-1 bg-primary text-primary-foreground text-sm font-bold px-4 py-1.5 rounded hover:opacity-90 transition-opacity"
           >
-            + New Bet
+            {newLabel}
           </Link>
           <UserAvatarMenu profile={profile} />
         </div>

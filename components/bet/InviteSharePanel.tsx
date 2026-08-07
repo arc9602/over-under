@@ -6,15 +6,24 @@ import { Button } from "@/components/ui/button";
 
 interface InviteSharePanelProps {
   inviteCode: string;
+  /** Public landing route this code belongs to. Markets share the same panel. */
+  basePath?: "/bet" | "/market";
+  blurb?: string;
+  shareTitle?: string;
 }
 
-export function InviteSharePanel({ inviteCode }: InviteSharePanelProps) {
+export function InviteSharePanel({
+  inviteCode,
+  basePath = "/bet",
+  blurb = "Share this link with your friend to take the other side.",
+  shareTitle = "Join my bet on Over/Under",
+}: InviteSharePanelProps) {
   const [copied, setCopied] = useState(false);
 
   const inviteUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/bet/${inviteCode}`
-      : `/bet/${inviteCode}`;
+      ? `${window.location.origin}${basePath}/${inviteCode}`
+      : `${basePath}/${inviteCode}`;
 
   async function handleCopy() {
     await navigator.clipboard.writeText(inviteUrl);
@@ -24,7 +33,7 @@ export function InviteSharePanel({ inviteCode }: InviteSharePanelProps) {
 
   async function handleShare() {
     if (navigator.share) {
-      await navigator.share({ title: "Join my bet on Over/Under", url: inviteUrl });
+      await navigator.share({ title: shareTitle, url: inviteUrl });
     } else {
       handleCopy();
     }
@@ -34,9 +43,7 @@ export function InviteSharePanel({ inviteCode }: InviteSharePanelProps) {
     <Card className="border-primary/30 bg-primary/5">
       <CardContent className="p-4">
         <p className="text-xs font-black tracking-widest text-primary mb-2">INVITE LINK</p>
-        <p className="text-xs text-muted-foreground mb-3">
-          Share this link with your friend to take the other side.
-        </p>
+        <p className="text-xs text-muted-foreground mb-3">{blurb}</p>
         <div className="flex items-center gap-2 bg-background rounded border border-border px-3 py-2 mb-3">
           <span className="text-xs text-muted-foreground flex-1 truncate">{inviteUrl}</span>
         </div>

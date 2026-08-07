@@ -31,7 +31,9 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const protectedPaths = ["/dashboard", "/bets", "/balances", "/settings"];
+  // Note the trailing "s" on "/markets": these are startsWith checks, and
+  // "/market" would also gate the public invite landing at /market/<code>.
+  const protectedPaths = ["/dashboard", "/bets", "/markets", "/balances", "/settings"];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
 
   if (!user && isProtected) {
