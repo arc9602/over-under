@@ -5,27 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { placeWager } from "@/lib/actions/bets";
-import type { BetOption } from "@/lib/types";
 
 interface WagerFormProps {
   identifier: { betId: string } | { inviteCode: string };
-  options: BetOption[];
+  sideALabel: string;
+  sideBLabel: string;
   minWager: number | null;
   maxWager: number | null;
-  /** If the user already has a wager on this bet, lock the option and just let them add more. */
-  existingOptionId?: string;
+  /** If the user already has a wager on this bet, lock the side and just let them add more. */
+  existingSide?: "a" | "b";
   existingAmount?: number;
 }
 
 export function WagerForm({
-  identifier, options, minWager, maxWager, existingOptionId, existingAmount = 0,
+  identifier, sideALabel, sideBLabel, minWager, maxWager, existingSide, existingAmount = 0,
 }: WagerFormProps) {
-  const sortedOptions = [...options].sort((a, b) => a.sort_order - b.sort_order);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [optionId, setOptionId] = useState(existingOptionId ?? sortedOptions[0]?.id ?? "");
-
-  const existingOption = sortedOptions.find((option) => option.id === existingOptionId);
+  const [side, setSide] = useState<"a" | "b">(existingSide ?? "a");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,15 +30,17 @@ export function WagerForm({
     const formData = new FormData(e.currentTarget);
     const amount = Number(formData.get("amount"));
     startTransition(async () => {
-      const result = await placeWager(identifier, existingOptionId ?? optionId, amount);
+      const result = await placeWager(identifier, existingSide ?? side, amount);
       if (result?.error) {
         setError(result.error);
       }
     });
   }
 
+  // min/max apply to the cumulative wager, so for a top-up the remaining
+  // room is what's left, not the raw bet-level limits.
   const remainingMax = maxWager != null ? Math.max(0, maxWager - existingAmount) : undefined;
-  const limitsText = existingOptionId
+  const limitsText = existingSide
     ? maxWager != null
       ? `up to $${remainingMax!.toFixed(2)} more (max $${maxWager.toFixed(2)} total)`
       : ""
@@ -54,28 +53,24 @@ export function WagerForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {existingOptionId ? (
+      {existingSide ? (
         <p className="text-sm text-muted-foreground">
-          Adding to your <span className="font-bold text-foreground">{existingOption?.label}</span> wager
+          Adding to your <span className="font-bold text-foreground">{existingSide === "a" ? sideALabel : sideBLabel}</span> wager
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          {sortedOptions.map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              variant={optionId === option.id ? "default" : "outline"}
-              onClick={() => setOptionId(option.id)}
-            >
-              {option.label}
-            </Button>
-          ))}
+          <Button type="button" variant={side === "a" ? "default" : "outline"} onClick={() => setSide("a")}>
+            {sideALabel}
+          </Button>
+          <Button type="button" variant={side === "b" ? "default" : "outline"} onClick={() => setSide("b")}>
+            {sideBLabel}
+          </Button>
         </div>
       )}
 
       <div className="space-y-2">
         <Label htmlFor="amount">
-          {existingOptionId ? "Amount to add" : "Your wager"}
+          {existingSide ? "Amount to add" : "Your wager"}
           {limitsText ? ` (${limitsText})` : ""}
         </Label>
         <div className="relative">
@@ -86,7 +81,7 @@ export function WagerForm({
             type="number"
             placeholder="20.00"
             min={0.01}
-            max={existingOptionId ? remainingMax : maxWager ?? undefined}
+            max={existingSide ? remainingMax : maxWager ?? undefined}
             step="0.01"
             required
             className="pl-6"
@@ -97,7 +92,7 @@ export function WagerForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button type="submit" className="w-full font-black text-base py-6" disabled={isPending}>
-        {isPending ? "Placing wager…" : existingOptionId ? "Add to Wager" : "Place Wager"}
+        {isPending ? "Placing wager…" : existingSide ? "Add to Wager" : "Place Wager"}
       </Button>
     </form>
   );

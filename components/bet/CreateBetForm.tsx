@@ -10,41 +10,20 @@ import { createBet } from "@/lib/actions/bets";
 export function CreateBetForm() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [options, setOptions] = useState(["Yes", "No"]);
+  const [sideALabel, setSideALabel] = useState("Yes");
+  const [sideBLabel, setSideBLabel] = useState("No");
   const [wagerNow, setWagerNow] = useState(false);
-  const [creatorOptionIndex, setCreatorOptionIndex] = useState(0);
-
-  function updateOption(index: number, value: string) {
-    setOptions((current) => current.map((option, i) => (i === index ? value : option)));
-  }
-
-  function addOption() {
-    if (options.length >= 10) return;
-    setOptions((current) => [...current, ""]);
-  }
-
-  function removeOption(index: number) {
-    if (options.length <= 2) return;
-    setOptions((current) => current.filter((_, i) => i !== index));
-    if (creatorOptionIndex >= index && creatorOptionIndex > 0) {
-      setCreatorOptionIndex(creatorOptionIndex - 1);
-    } else if (creatorOptionIndex >= options.length - 1) {
-      setCreatorOptionIndex(Math.max(0, options.length - 2));
-    }
-  }
+  const [creatorSide, setCreatorSide] = useState<"a" | "b">("a");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
-    options.forEach((option) => {
-      if (option.trim()) formData.append("optionLabels", option.trim());
-    });
     if (!wagerNow) {
-      formData.delete("creatorOptionIndex");
+      formData.delete("creatorSide");
       formData.delete("creatorAmount");
     } else {
-      formData.set("creatorOptionIndex", String(creatorOptionIndex));
+      formData.set("creatorSide", creatorSide);
     }
     startTransition(async () => {
       const result = await createBet(formData);
@@ -81,42 +60,28 @@ export function CreateBetForm() {
         />
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label>Options</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addOption}
-            disabled={options.length >= 10}
-          >
-            Add option
-          </Button>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="sideALabel">Side A label</Label>
+          <Input
+            id="sideALabel"
+            name="sideALabel"
+            placeholder="Yes"
+            value={sideALabel}
+            onChange={(e) => setSideALabel(e.target.value)}
+            maxLength={50}
+          />
         </div>
         <div className="space-y-2">
-          {options.map((option, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input
-                value={option}
-                onChange={(e) => updateOption(index, e.target.value)}
-                placeholder={index === 0 ? "Yes" : index === 1 ? "No" : `Option ${index + 1}`}
-                maxLength={50}
-                required
-              />
-              {options.length > 2 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 text-muted-foreground"
-                  onClick={() => removeOption(index)}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          ))}
+          <Label htmlFor="sideBLabel">Side B label</Label>
+          <Input
+            id="sideBLabel"
+            name="sideBLabel"
+            placeholder="No"
+            value={sideBLabel}
+            onChange={(e) => setSideBLabel(e.target.value)}
+            maxLength={50}
+          />
         </div>
       </div>
 
@@ -183,16 +148,20 @@ export function CreateBetForm() {
         {wagerNow && (
           <div className="space-y-3 pt-1">
             <div className="grid grid-cols-2 gap-2">
-              {options.map((option, index) => (
-                <Button
-                  key={index}
-                  type="button"
-                  variant={creatorOptionIndex === index ? "default" : "outline"}
-                  onClick={() => setCreatorOptionIndex(index)}
-                >
-                  {option.trim() || `Option ${index + 1}`}
-                </Button>
-              ))}
+              <Button
+                type="button"
+                variant={creatorSide === "a" ? "default" : "outline"}
+                onClick={() => setCreatorSide("a")}
+              >
+                {sideALabel || "Side A"}
+              </Button>
+              <Button
+                type="button"
+                variant={creatorSide === "b" ? "default" : "outline"}
+                onClick={() => setCreatorSide("b")}
+              >
+                {sideBLabel || "Side B"}
+              </Button>
             </div>
             <div className="space-y-2">
               <Label htmlFor="creatorAmount">Your wager</Label>

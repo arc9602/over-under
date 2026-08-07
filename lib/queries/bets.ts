@@ -30,7 +30,6 @@ export async function getBetsForUser(userId: string): Promise<BetWithParticipant
     .select(`
       *,
       creator:profiles!bets_creator_id_fkey (*),
-      bet_options (*),
       bet_participants (
         *,
         profiles (*)
@@ -65,7 +64,6 @@ export async function getBetById(betId: string): Promise<BetWithDetails | null> 
     .select(`
       *,
       creator:profiles!bets_creator_id_fkey (*),
-      bet_options (*),
       bet_participants (
         *,
         profiles (*)
@@ -89,7 +87,6 @@ export async function getBetByInviteCode(inviteCode: string) {
     .select(`
       *,
       creator:profiles!bets_creator_id_fkey (*),
-      bet_options (*),
       bet_participants (
         *,
         profiles (*)

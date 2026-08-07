@@ -35,7 +35,7 @@ export function InviteSharePanel({ inviteCode }: InviteSharePanelProps) {
       <CardContent className="p-4">
         <p className="text-xs font-black tracking-widest text-primary mb-2">INVITE LINK</p>
         <p className="text-xs text-muted-foreground mb-3">
-          Share this link so friends can pick an option and wager.
+          Share this link with your friend to take the other side.
         </p>
         <div className="flex items-center gap-2 bg-background rounded border border-border px-3 py-2 mb-3">
           <span className="text-xs text-muted-foreground flex-1 truncate">{inviteUrl}</span>

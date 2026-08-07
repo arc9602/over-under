@@ -39,6 +39,8 @@ export type Database = {
           invite_code: string;
           title: string;
           description: string | null;
+          side_a_label: string;
+          side_b_label: string;
           min_wager: number | null;
           max_wager: number | null;
           currency: string;
@@ -53,6 +55,8 @@ export type Database = {
           invite_code?: string;
           title: string;
           description?: string | null;
+          side_a_label?: string;
+          side_b_label?: string;
           min_wager?: number | null;
           max_wager?: number | null;
           currency?: string;
@@ -67,6 +71,8 @@ export type Database = {
           invite_code?: string;
           title?: string;
           description?: string | null;
+          side_a_label?: string;
+          side_b_label?: string;
           min_wager?: number | null;
           max_wager?: number | null;
           currency?: string;
@@ -86,41 +92,12 @@ export type Database = {
           }
         ];
       };
-      bet_options: {
-        Row: {
-          id: string;
-          bet_id: string;
-          label: string;
-          sort_order: number;
-        };
-        Insert: {
-          id?: string;
-          bet_id: string;
-          label: string;
-          sort_order: number;
-        };
-        Update: {
-          id?: string;
-          bet_id?: string;
-          label?: string;
-          sort_order?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "bet_options_bet_id_fkey";
-            columns: ["bet_id"];
-            isOneToOne: false;
-            referencedRelation: "bets";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
       bet_participants: {
         Row: {
           id: string;
           bet_id: string;
           user_id: string;
-          option_id: string;
+          side: "a" | "b";
           amount: number;
           joined_at: string;
         };
@@ -128,7 +105,7 @@ export type Database = {
           id?: string;
           bet_id: string;
           user_id: string;
-          option_id: string;
+          side: "a" | "b";
           amount: number;
           joined_at?: string;
         };
@@ -136,7 +113,7 @@ export type Database = {
           id?: string;
           bet_id?: string;
           user_id?: string;
-          option_id?: string;
+          side?: "a" | "b";
           amount?: number;
           joined_at?: string;
         };
@@ -146,13 +123,6 @@ export type Database = {
             columns: ["bet_id"];
             isOneToOne: false;
             referencedRelation: "bets";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "bet_participants_option_id_fkey";
-            columns: ["option_id"];
-            isOneToOne: false;
-            referencedRelation: "bet_options";
             referencedColumns: ["id"];
           },
           {
@@ -169,7 +139,7 @@ export type Database = {
           id: string;
           bet_id: string;
           proposed_by: string;
-          proposed_winner_option_id: string;
+          proposed_winner_side: "a" | "b";
           confirmed_by: string | null;
           status: ResolutionStatus;
           created_at: string;
@@ -179,7 +149,7 @@ export type Database = {
           id?: string;
           bet_id: string;
           proposed_by: string;
-          proposed_winner_option_id: string;
+          proposed_winner_side: "a" | "b";
           confirmed_by?: string | null;
           status?: ResolutionStatus;
           created_at?: string;
@@ -189,7 +159,7 @@ export type Database = {
           id?: string;
           bet_id?: string;
           proposed_by?: string;
-          proposed_winner_option_id?: string;
+          proposed_winner_side?: "a" | "b";
           confirmed_by?: string | null;
           status?: ResolutionStatus;
           created_at?: string;
@@ -201,13 +171,6 @@ export type Database = {
             columns: ["bet_id"];
             isOneToOne: false;
             referencedRelation: "bets";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "resolutions_proposed_winner_option_id_fkey";
-            columns: ["proposed_winner_option_id"];
-            isOneToOne: false;
-            referencedRelation: "bet_options";
             referencedColumns: ["id"];
           }
         ];
@@ -295,7 +258,7 @@ export type Database = {
         Args: {
           p_bet_id: string;
           p_user_id: string;
-          p_option_id: string;
+          p_side: "a" | "b";
           p_amount: number;
         };
         Returns: undefined;

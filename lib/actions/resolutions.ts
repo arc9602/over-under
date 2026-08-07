@@ -4,11 +4,12 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function proposeResolution(betId: string, winnerOptionId: string) {
+export async function proposeResolution(betId: string, winnerSide: "a" | "b") {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Verify bet is locked (creator has cut off new wagers)
   const { data: bet } = await supabase
     .from("bets")
     .select("id, status")
@@ -24,7 +25,7 @@ export async function proposeResolution(betId: string, winnerOptionId: string) {
     .insert({
       bet_id: betId,
       proposed_by: user.id,
-      proposed_winner_option_id: winnerOptionId,
+      proposed_winner_side: winnerSide,
     });
 
   if (error) return { error: error.message };

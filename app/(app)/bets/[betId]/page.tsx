@@ -52,10 +52,11 @@ export default async function BetDetailPage({ params }: Props) {
       {canWager && (
         <WagerForm
           identifier={{ betId }}
-          options={bet.bet_options}
+          sideALabel={bet.side_a_label}
+          sideBLabel={bet.side_b_label}
           minWager={bet.min_wager}
           maxWager={bet.max_wager}
-          existingOptionId={myParticipation?.option_id}
+          existingSide={myParticipation?.side}
           existingAmount={myParticipation?.amount}
         />
       )}
