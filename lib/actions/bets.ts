@@ -9,37 +9,51 @@ const createBetSchema = z
   .object({
     title: z.string().min(3).max(200),
     description: z.string().max(500).optional(),
-    sideALabel: z.string().min(1).max(50).default("Yes"),
-    sideBLabel: z.string().min(1).max(50).default("No"),
+    optionLabels: z.array(z.string().trim().min(1).max(50)).min(2).max(10),
     minWager: z.coerce.number().positive().max(100000).optional(),
     maxWager: z.coerce.number().positive().max(100000).optional(),
     deadline: z.string().optional(),
-    creatorSide: z.enum(["a", "b"]).optional(),
+    creatorOptionIndex: z.coerce.number().int().min(0).optional(),
     creatorAmount: z.coerce.number().positive().max(100000).optional(),
   })
   .refine((d) => (d.minWager == null || d.maxWager == null) || d.minWager <= d.maxWager, {
     message: "Minimum wager can't exceed maximum wager",
     path: ["maxWager"],
   })
-  .refine((d) => Boolean(d.creatorSide) === Boolean(d.creatorAmount), {
-    message: "Choose a side and an amount to wager now, or leave both blank",
-    path: ["creatorAmount"],
-  });
+  .refine(
+    (d) =>
+      (d.creatorOptionIndex == null && d.creatorAmount == null) ||
+      (d.creatorOptionIndex != null && d.creatorAmount != null),
+    {
+      message: "Choose an option and an amount to wager now, or leave both blank",
+      path: ["creatorAmount"],
+    }
+  )
+  .refine(
+    (d) =>
+      d.creatorOptionIndex == null ||
+      d.creatorOptionIndex < d.optionLabels.length,
+    {
+      message: "Invalid option selected for creator wager",
+      path: ["creatorOptionIndex"],
+    }
+  );
 
 export async function createBet(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const optionLabels = formData.getAll("optionLabels").map(String).filter(Boolean);
+
   const parsed = createBetSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description"),
-    sideALabel: formData.get("sideALabel"),
-    sideBLabel: formData.get("sideBLabel"),
+    optionLabels,
     minWager: formData.get("minWager") || undefined,
     maxWager: formData.get("maxWager") || undefined,
     deadline: formData.get("deadline") || undefined,
-    creatorSide: formData.get("creatorSide") || undefined,
+    creatorOptionIndex: formData.get("creatorOptionIndex") || undefined,
     creatorAmount: formData.get("creatorAmount") || undefined,
   });
 
@@ -48,8 +62,8 @@ export async function createBet(formData: FormData) {
   }
 
   const {
-    title, description, sideALabel, sideBLabel, minWager, maxWager, deadline,
-    creatorSide, creatorAmount,
+    title, description, minWager, maxWager, deadline,
+    creatorOptionIndex, creatorAmount,
   } = parsed.data;
 
   const { data: bet, error } = await supabase
@@ -57,8 +71,6 @@ export async function createBet(formData: FormData) {
     .insert({
       title,
       description: description ?? null,
-      side_a_label: sideALabel,
-      side_b_label: sideBLabel,
       min_wager: minWager ?? null,
       max_wager: maxWager ?? null,
       deadline: deadline ? new Date(deadline).toISOString() : null,
@@ -69,16 +81,32 @@ export async function createBet(formData: FormData) {
 
   if (error) return { error: error.message };
 
-  if (creatorSide && creatorAmount) {
-    const serviceClient = await createServiceClient();
-    await serviceClient.rpc("place_wager", {
-      p_bet_id: bet.id,
-      p_user_id: user.id,
-      p_side: creatorSide,
-      p_amount: creatorAmount,
-    });
-    // Non-fatal if this fails (e.g. amount outside min/max) -- the bet
-    // still exists and the creator can wager again from its own page.
+  const { data: options, error: optionsError } = await supabase
+    .from("bet_options")
+    .insert(
+      optionLabels.map((label, index) => ({
+        bet_id: bet.id,
+        label,
+        sort_order: index,
+      }))
+    )
+    .select("id, sort_order");
+
+  if (optionsError || !options?.length) {
+    return { error: optionsError?.message ?? "Failed to create bet options" };
+  }
+
+  if (creatorOptionIndex != null && creatorAmount) {
+    const creatorOption = options.find((o) => o.sort_order === creatorOptionIndex);
+    if (creatorOption) {
+      const serviceClient = await createServiceClient();
+      await serviceClient.rpc("place_wager", {
+        p_bet_id: bet.id,
+        p_user_id: user.id,
+        p_option_id: creatorOption.id,
+        p_amount: creatorAmount,
+      });
+    }
   }
 
   revalidatePath("/dashboard");
@@ -87,7 +115,7 @@ export async function createBet(formData: FormData) {
 
 export async function placeWager(
   identifier: { betId: string } | { inviteCode: string },
-  side: "a" | "b",
+  optionId: string,
   amount: number
 ) {
   const supabase = await createClient();
@@ -107,7 +135,7 @@ export async function placeWager(
   const { error } = await serviceClient.rpc("place_wager", {
     p_bet_id: bet.id,
     p_user_id: user.id,
-    p_side: side,
+    p_option_id: optionId,
     p_amount: amount,
   });
 
@@ -133,7 +161,7 @@ export async function lockBet(betId: string) {
     .single();
 
   if (error || !data) {
-    return { error: "Unable to lock this bet -- it must be funded on both sides and you must be the creator" };
+    return { error: "Unable to lock this bet -- it must be funded on at least two options and you must be the creator" };
   }
 
   revalidatePath(`/bets/${betId}`);

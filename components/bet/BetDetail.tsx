@@ -3,7 +3,7 @@ import { BetStatusBadge } from "./BetStatusBadge";
 import { CountdownTimer } from "./CountdownTimer";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDate } from "@/lib/utils/formatDate";
-import { getSideTotals } from "@/lib/utils/betPool";
+import { getOptionTotals, getTotalPool, sortBetOptions } from "@/lib/utils/betPool";
 import type { BetWithDetails } from "@/lib/types";
 
 interface BetDetailProps {
@@ -52,14 +52,12 @@ function SideList({
 }
 
 export function BetDetail({ bet, currentUserId }: BetDetailProps) {
-  const sideA = getSideTotals(bet.bet_participants, "a");
-  const sideB = getSideTotals(bet.bet_participants, "b");
-  const totalPool = sideA.total + sideB.total;
-  const userSide = bet.bet_participants.find((p) => p.user_id === currentUserId)?.side;
+  const options = sortBetOptions(bet.bet_options);
+  const totalPool = getTotalPool(bet.bet_participants);
+  const userOptionId = bet.bet_participants.find((p) => p.user_id === currentUserId)?.option_id;
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black leading-tight">{bet.title}</h1>
@@ -70,28 +68,25 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
         <BetStatusBadge status={bet.status} />
       </div>
 
-      {/* Pool */}
       <div className="flex items-center gap-2">
         <span className="text-3xl font-black text-primary">{formatCurrency(totalPool)}</span>
         <span className="text-muted-foreground text-sm">in the pool</span>
       </div>
 
-      {/* Sides */}
-      <div className="grid grid-cols-2 gap-3">
-        <SideList
-          label={bet.side_a_label}
-          rows={sideA.rows}
-          total={sideA.total}
-          currentUserId={currentUserId}
-          highlighted={userSide === "a"}
-        />
-        <SideList
-          label={bet.side_b_label}
-          rows={sideB.rows}
-          total={sideB.total}
-          currentUserId={currentUserId}
-          highlighted={userSide === "b"}
-        />
+      <div className={`grid gap-3 ${options.length > 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2"}`}>
+        {options.map((option) => {
+          const totals = getOptionTotals(bet.bet_participants, option.id);
+          return (
+            <SideList
+              key={option.id}
+              label={option.label}
+              rows={totals.rows}
+              total={totals.total}
+              currentUserId={currentUserId}
+              highlighted={userOptionId === option.id}
+            />
+          );
+        })}
       </div>
 
       {(bet.min_wager != null || bet.max_wager != null) && (
@@ -105,7 +100,6 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
         </p>
       )}
 
-      {/* Meta */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <span>Created {formatDate(bet.created_at)}</span>
         {bet.deadline && (

@@ -8,7 +8,7 @@ import { BetStatusBadge } from "@/components/bet/BetStatusBadge";
 import { CountdownTimer } from "@/components/bet/CountdownTimer";
 import { WagerForm } from "@/components/bet/WagerForm";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { getSideTotals } from "@/lib/utils/betPool";
+import { getOptionTotals, getTotalPool, sortBetOptions } from "@/lib/utils/betPool";
 
 interface Props {
   params: Promise<{ inviteCode: string }>;
@@ -37,17 +37,14 @@ export default async function InviteLandingPage({ params }: Props) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // If already a participant, go to bet page
   if (user) {
     const isParticipant = bet.bet_participants.some((p) => p.user_id === user.id);
     if (isParticipant) redirect(`/bets/${bet.id}`);
   }
 
   const creatorName = bet.creator.display_name ?? bet.creator.username;
-  const sideA = getSideTotals(bet.bet_participants, "a");
-  const sideB = getSideTotals(bet.bet_participants, "b");
-  const totalPool = sideA.total + sideB.total;
-
+  const options = sortBetOptions(bet.bet_options);
+  const totalPool = getTotalPool(bet.bet_participants);
   const canJoin = bet.status === "open" || bet.status === "active";
 
   const limits = [
@@ -78,17 +75,19 @@ export default async function InviteLandingPage({ params }: Props) {
               <p className="text-sm text-muted-foreground">{bet.description}</p>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-secondary rounded p-2 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{bet.side_a_label}</p>
-                <p className="font-bold text-sm">{formatCurrency(sideA.total)}</p>
-                <p className="text-xs text-muted-foreground">{sideA.count} {sideA.count === 1 ? "person" : "people"}</p>
-              </div>
-              <div className="bg-secondary rounded p-2 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{bet.side_b_label}</p>
-                <p className="font-bold text-sm">{formatCurrency(sideB.total)}</p>
-                <p className="text-xs text-muted-foreground">{sideB.count} {sideB.count === 1 ? "person" : "people"}</p>
-              </div>
+            <div className={`grid gap-2 ${options.length > 2 ? "grid-cols-1" : "grid-cols-2"}`}>
+              {options.map((option) => {
+                const totals = getOptionTotals(bet.bet_participants, option.id);
+                return (
+                  <div key={option.id} className="bg-secondary rounded p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{option.label}</p>
+                    <p className="font-bold text-sm">{formatCurrency(totals.total)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {totals.count} {totals.count === 1 ? "person" : "people"}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex items-center justify-between">
@@ -103,8 +102,7 @@ export default async function InviteLandingPage({ params }: Props) {
           user ? (
             <WagerForm
               identifier={{ inviteCode }}
-              sideALabel={bet.side_a_label}
-              sideBLabel={bet.side_b_label}
+              options={bet.bet_options}
               minWager={bet.min_wager}
               maxWager={bet.max_wager}
             />

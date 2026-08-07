@@ -4,6 +4,7 @@ export type { BetStatus, ResolutionStatus } from "./database.types";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Bet = Database["public"]["Tables"]["bets"]["Row"];
+export type BetOption = Database["public"]["Tables"]["bet_options"]["Row"];
 export type BetParticipant =
   Database["public"]["Tables"]["bet_participants"]["Row"];
 export type Resolution = Database["public"]["Tables"]["resolutions"]["Row"];
@@ -12,11 +13,13 @@ export type Settlement = Database["public"]["Tables"]["settlements"]["Row"];
 
 export type BetWithParticipants = Bet & {
   creator: Profile;
+  bet_options: BetOption[];
   bet_participants: (BetParticipant & { profiles: Profile })[];
 };
 
 export type BetWithDetails = Bet & {
   creator: Profile;
+  bet_options: BetOption[];
   bet_participants: (BetParticipant & { profiles: Profile })[];
   resolutions: Resolution[];
 };
