@@ -9,6 +9,7 @@ import { WagerForm } from "@/components/bet/WagerForm";
 import { cancelBet, lockBet } from "@/lib/actions/bets";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getBetOptions } from "@/lib/utils/betPool";
 
 interface Props {
   params: Promise<{ betId: string }>;
@@ -35,6 +36,7 @@ export default async function BetDetailPage({ params }: Props) {
   const canCancel = isCreator && (bet.status === "open" || bet.status === "active");
   const canLock = isCreator && bet.status === "active";
   const canWager = bet.status === "open" || bet.status === "active";
+  const options = getBetOptions(bet);
 
   const netIou = bet.status === "resolved" ? await getNetIouForBet(betId, user.id) : undefined;
 
@@ -52,11 +54,12 @@ export default async function BetDetailPage({ params }: Props) {
       {canWager && (
         <WagerForm
           identifier={{ betId }}
-          sideALabel={bet.side_a_label}
-          sideBLabel={bet.side_b_label}
+          options={options}
           minWager={bet.min_wager}
           maxWager={bet.max_wager}
-          existingSide={myParticipation?.side}
+          existingOptionId={
+            myParticipation?.option_id ?? myParticipation?.side ?? undefined
+          }
           existingAmount={myParticipation?.amount}
         />
       )}

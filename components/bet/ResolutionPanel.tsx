@@ -5,7 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { proposeResolution, confirmResolution, disputeResolution } from "@/lib/actions/resolutions";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { getPariMutuelPreview } from "@/lib/utils/betPool";
+import {
+  getBetOptions,
+  getOptionTotals,
+  getPariMutuelPreview,
+  getTotalPool,
+} from "@/lib/utils/betPool";
 import type { BetWithDetails } from "@/lib/types";
 
 interface ResolutionPanelProps {
@@ -17,17 +22,18 @@ interface ResolutionPanelProps {
 export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const options = getBetOptions(bet);
 
   const pendingResolution = bet.resolutions.find((r) => r.status === "pending");
 
-  function sideLabel(side: "a" | "b") {
-    return side === "a" ? bet.side_a_label : bet.side_b_label;
+  function optionLabel(optionId: string) {
+    return options.find((option) => option.id === optionId)?.label ?? "Unknown";
   }
 
-  function handlePropose(winnerSide: "a" | "b") {
+  function handlePropose(winnerOptionId: string) {
     setError(null);
     startTransition(async () => {
-      const result = await proposeResolution(bet.id, winnerSide);
+      const result = await proposeResolution(bet.id, winnerOptionId);
       if (result?.error) setError(result.error);
     });
   }
@@ -53,7 +59,34 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
   if (bet.status === "resolved") {
     const confirmedResolution = bet.resolutions.find((r) => r.status === "confirmed");
     if (confirmedResolution) {
-      const label = sideLabel(confirmedResolution.proposed_winner_side);
+      const winnerOptionId =
+        confirmedResolution.proposed_winner_option_id ??
+        confirmedResolution.proposed_winner_side ??
+        "";
+      const label = optionLabel(winnerOptionId);
+      const winningPool = getOptionTotals(
+        bet.bet_participants,
+        winnerOptionId
+      ).total;
+      const losingPool =
+        getTotalPool(bet.bet_participants) - winningPool;
+      const refunded = winningPool === 0 || losingPool === 0;
+
+      if (refunded) {
+        return (
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl mb-1">↩️</p>
+              <p className="font-black text-lg">Wagers refunded</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                <span className="font-medium text-foreground">{label}</span>{" "}
+                won, but the winning or opposing pool was unfunded.
+              </p>
+            </CardContent>
+          </Card>
+        );
+      }
+
       const net = netIou ?? 0;
       const won = net > 0;
       const broke_even = net === 0;
@@ -91,21 +124,27 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
       <Card>
         <CardContent className="p-4">
           <p className="text-xs font-black tracking-widest text-muted-foreground mb-3">WHO WON?</p>
-          <div className="grid grid-cols-2 gap-2">
-            {(["a", "b"] as const).map((side) => {
-              const preview = getPariMutuelPreview(bet.bet_participants, side, currentUserId);
+          <div
+            className={`grid gap-2 ${
+              options.length > 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2"
+            }`}
+          >
+            {options.map((option) => {
+              const preview = getPariMutuelPreview(bet.bet_participants, option.id, currentUserId);
               return (
                 <Button
-                  key={side}
+                  key={option.id}
                   variant="outline"
                   className="h-auto py-3 flex-col gap-1 hover:border-primary hover:bg-primary/5"
-                  onClick={() => handlePropose(side)}
+                  onClick={() => handlePropose(option.id)}
                   disabled={isPending}
                 >
-                  <span className="font-bold text-sm">{sideLabel(side)}</span>
+                  <span className="font-bold text-sm">{option.label}</span>
                   {preview.isParticipant && (
                     <span className={`text-xs ${preview.profit >= 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
-                      {preview.profit >= 0
+                      {preview.refunded
+                        ? "Your wager would be refunded"
+                        : preview.profit >= 0
                         ? `You'd net +${formatCurrency(preview.profit)}`
                         : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
                     </span>
@@ -121,7 +160,11 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
   }
 
   if (bet.status === "resolving" && pendingResolution) {
-    const label = sideLabel(pendingResolution.proposed_winner_side);
+    const winnerOptionId =
+      pendingResolution.proposed_winner_option_id ??
+      pendingResolution.proposed_winner_side ??
+      "";
+    const label = optionLabel(winnerOptionId);
     const proposerProfile = bet.bet_participants.find(
       (p) => p.user_id === pendingResolution.proposed_by
     )?.profiles;
