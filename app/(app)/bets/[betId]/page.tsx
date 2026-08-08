@@ -7,6 +7,7 @@ import { ResolutionPanel } from "@/components/bet/ResolutionPanel";
 import { InviteSharePanel } from "@/components/bet/InviteSharePanel";
 import { WagerForm } from "@/components/bet/WagerForm";
 import { cancelBet, lockBet } from "@/lib/actions/bets";
+import { getSideTotals } from "@/lib/utils/betPool";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -56,6 +57,8 @@ export default async function BetDetailPage({ params }: Props) {
           sideBLabel={bet.side_b_label}
           minWager={bet.min_wager}
           maxWager={bet.max_wager}
+          sideATotal={getSideTotals(bet.bet_participants, "a").total}
+          sideBTotal={getSideTotals(bet.bet_participants, "b").total}
           existingSide={myParticipation?.side}
           existingAmount={myParticipation?.amount}
         />

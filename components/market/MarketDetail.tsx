@@ -2,8 +2,10 @@ import { BetStatusBadge } from "@/components/bet/BetStatusBadge";
 import { CountdownTimer } from "@/components/bet/CountdownTimer";
 import { OrderBook } from "./OrderBook";
 import { PositionCard } from "./PositionCard";
+import { MarketOddsChart } from "./MarketOddsChart";
+import { BetPositionChart } from "./BetPositionChart";
 import { formatDate } from "@/lib/utils/formatDate";
-import { formatCents } from "@/lib/utils/marketBook";
+import { formatCents, getOddsHistory, getPositionHistory } from "@/lib/utils/marketBook";
 import type { MarketWithDetails } from "@/lib/types";
 
 interface MarketDetailProps {
@@ -13,6 +15,8 @@ interface MarketDetailProps {
 
 export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
   const volume = market.market_fills.reduce((sum, f) => sum + f.quantity, 0);
+  const oddsHistory = getOddsHistory(market.market_fills);
+  const positionHistory = getPositionHistory(market.market_fills, currentUserId);
 
   return (
     <div className="space-y-4">
@@ -37,6 +41,12 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
         </span>
       </div>
 
+      <MarketOddsChart
+        data={oddsHistory}
+        yesLabel={market.yes_label}
+        noLabel={market.no_label}
+      />
+
       <OrderBook
         orders={market.market_orders}
         yesLabel={market.yes_label}
@@ -49,6 +59,16 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
         yesLabel={market.yes_label}
         noLabel={market.no_label}
       />
+
+      {positionHistory.points.length > 0 && (
+        <BetPositionChart
+          data={positionHistory.points}
+          referenceOdds={positionHistory.referenceOdds}
+          side={positionHistory.side}
+          yesLabel={market.yes_label}
+          noLabel={market.no_label}
+        />
+      )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>

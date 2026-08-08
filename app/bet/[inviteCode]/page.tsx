@@ -107,6 +107,8 @@ export default async function InviteLandingPage({ params }: Props) {
               sideBLabel={bet.side_b_label}
               minWager={bet.min_wager}
               maxWager={bet.max_wager}
+              sideATotal={sideA.total}
+              sideBTotal={sideB.total}
             />
           ) : (
             <Link

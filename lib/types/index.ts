@@ -8,6 +8,15 @@ export type {
   MarketOrderStatus,
 } from "./database.types";
 
+export type {
+  Timeframe,
+  MarketOddsPoint,
+  UserPositionPoint,
+  BetPoolPoint,
+  UserBetPoolPoint,
+} from "./charts";
+export { TIMEFRAMES } from "./charts";
+
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Bet = Database["public"]["Tables"]["bets"]["Row"];
 export type BetParticipant =

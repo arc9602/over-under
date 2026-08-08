@@ -1,4 +1,5 @@
 import type { MarketFill, MarketOrder, MarketSide } from "@/lib/types";
+import type { MarketOddsPoint, UserPositionPoint } from "@/lib/types/charts";
 
 /**
  * Order-book and position math. The market analogue of betPool.ts: pure
@@ -214,6 +215,93 @@ export function getMyOpenOrders<T extends MarketOrder>(orders: T[], userId: stri
   return orders
     .filter((o) => o.user_id === userId && restingQuantity(o) > 0)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+/**
+ * The market's traded-price history, one point per fill in order. `yes_price`
+ * on a fill already *is* the yes-probability in percent (a contract settles
+ * at 100c), so this is a direct relabeling plus a running volume total --
+ * the source of truth for MarketOddsChart.
+ */
+export function getOddsHistory(fills: MarketFill[]): MarketOddsPoint[] {
+  const sorted = [...fills].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  let cumulativeVolume = 0;
+
+  return sorted.map((fill) => {
+    cumulativeVolume += fill.quantity;
+    return {
+      timestamp: new Date(fill.created_at).getTime(),
+      yesProbability: fill.yes_price,
+      noProbability: CONTRACT_CENTS - fill.yes_price,
+      volume: cumulativeVolume,
+    };
+  });
+}
+
+export type PositionHistory = {
+  points: UserPositionPoint[];
+  /** The net-long side as of the latest point, or null once/if fully offset. */
+  side: MarketSide | null;
+  /** Avg entry price for `side`, in probability-percent terms; null if flat. */
+  referenceOdds: number | null;
+};
+
+/**
+ * A user's position value/P&L marked-to-market at every fill from their
+ * first trade onward. Every fill in the market moves `currentOdds` (it's the
+ * whole book's price), but only the user's own fills change what they hold --
+ * mirrors getPosition's cost-basis math, just sampled at each point in time
+ * instead of collapsed to a single running total.
+ */
+export function getPositionHistory(fills: MarketFill[], userId: string): PositionHistory {
+  const sorted = [...fills].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const firstIndex = sorted.findIndex((f) => f.yes_user_id === userId || f.no_user_id === userId);
+  if (firstIndex === -1) return { points: [], side: null, referenceOdds: null };
+
+  const relevant = sorted.slice(firstIndex);
+
+  let yes = 0;
+  let no = 0;
+  let yesCost = 0;
+  let noCost = 0;
+  const points: UserPositionPoint[] = [];
+
+  for (const fill of relevant) {
+    if (fill.yes_user_id === userId) {
+      yes += fill.quantity;
+      yesCost += fill.yes_price * fill.quantity;
+    }
+    if (fill.no_user_id === userId) {
+      no += fill.quantity;
+      noCost += (CONTRACT_CENTS - fill.yes_price) * fill.quantity;
+    }
+
+    const currentOdds = fill.yes_price;
+    const held = yes + no;
+    const costCents = yesCost + noCost;
+    const valueCents = yes * currentOdds + no * (CONTRACT_CENTS - currentOdds);
+
+    points.push({
+      timestamp: new Date(fill.created_at).getTime(),
+      currentOdds,
+      positionValue: centsToDollars(valueCents),
+      averageEntryPrice: held > 0 ? centsToDollars(Math.round(costCents / held)) : 0,
+      pnl: centsToDollars(valueCents - costCents),
+    });
+  }
+
+  const net = yes - no;
+  const side: MarketSide | null = net > 0 ? "yes" : net < 0 ? "no" : null;
+  const avgYesPrice = yes > 0 ? Math.round(yesCost / yes) : null;
+  const avgNoPrice = no > 0 ? Math.round(noCost / no) : null;
+  const referenceOdds =
+    side === "yes"
+      ? avgYesPrice
+      : side === "no" && avgNoPrice != null
+      ? CONTRACT_CENTS - avgNoPrice
+      : null;
+
+  return { points, side, referenceOdds };
 }
 
 export { restingQuantity };

@@ -1,9 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { BetStatusBadge } from "./BetStatusBadge";
 import { CountdownTimer } from "./CountdownTimer";
+import { BetPoolChart } from "./BetPoolChart";
+import { BetWagerChart } from "./BetWagerChart";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDate } from "@/lib/utils/formatDate";
-import { getSideTotals } from "@/lib/utils/betPool";
+import { getSideTotals, getPoolHistory, getUserPoolHistory } from "@/lib/utils/betPool";
 import type { BetWithDetails } from "@/lib/types";
 
 interface BetDetailProps {
@@ -56,6 +58,14 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
   const sideB = getSideTotals(bet.bet_participants, "b");
   const totalPool = sideA.total + sideB.total;
   const userSide = bet.bet_participants.find((p) => p.user_id === currentUserId)?.side;
+  const poolHistory = getPoolHistory(bet.bet_participants);
+  const userPoolHistory = getUserPoolHistory(bet.bet_participants, currentUserId);
+  // While the bet still takes wagers, WagerForm is on screen below and this
+  // is a "deciding" view -- the pool trend is always shown, but the user's
+  // own wager chart stays hidden (the form's live predicted-payout preview
+  // already covers that). Once wagering closes, it's a "checking on it"
+  // view, so both charts show.
+  const canStillWager = bet.status === "open" || bet.status === "active";
 
   return (
     <div className="space-y-4">
@@ -76,6 +86,8 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
         <span className="text-muted-foreground text-sm">in the pool</span>
       </div>
 
+      <BetPoolChart data={poolHistory} sideALabel={bet.side_a_label} sideBLabel={bet.side_b_label} />
+
       {/* Sides */}
       <div className="grid grid-cols-2 gap-3">
         <SideList
@@ -93,6 +105,16 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
           highlighted={userSide === "b"}
         />
       </div>
+
+      {!canStillWager && userPoolHistory.points.length > 0 && (
+        <BetWagerChart
+          data={userPoolHistory.points}
+          referenceOdds={userPoolHistory.referenceOdds}
+          side={userPoolHistory.side}
+          sideALabel={bet.side_a_label}
+          sideBLabel={bet.side_b_label}
+        />
+      )}
 
       {(bet.min_wager != null || bet.max_wager != null) && (
         <p className="text-xs text-muted-foreground">

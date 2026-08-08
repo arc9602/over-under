@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { placeWager } from "@/lib/actions/bets";
+import { getPredictedPayout } from "@/lib/utils/betPool";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface WagerFormProps {
   identifier: { betId: string } | { inviteCode: string };
@@ -12,23 +14,27 @@ interface WagerFormProps {
   sideBLabel: string;
   minWager: number | null;
   maxWager: number | null;
+  /** Current pool totals, for the live predicted-payout preview. */
+  sideATotal: number;
+  sideBTotal: number;
   /** If the user already has a wager on this bet, lock the side and just let them add more. */
   existingSide?: "a" | "b";
   existingAmount?: number;
 }
 
 export function WagerForm({
-  identifier, sideALabel, sideBLabel, minWager, maxWager, existingSide, existingAmount = 0,
+  identifier, sideALabel, sideBLabel, minWager, maxWager, sideATotal, sideBTotal,
+  existingSide, existingAmount = 0,
 }: WagerFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [side, setSide] = useState<"a" | "b">(existingSide ?? "a");
+  const [amountInput, setAmountInput] = useState("");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const formData = new FormData(e.currentTarget);
-    const amount = Number(formData.get("amount"));
+    const amount = Number(amountInput);
     startTransition(async () => {
       const result = await placeWager(identifier, existingSide ?? side, amount);
       if (result?.error) {
@@ -36,6 +42,12 @@ export function WagerForm({
       }
     });
   }
+
+  const activeSide = existingSide ?? side;
+  const activeSideLabel = activeSide === "a" ? sideALabel : sideBLabel;
+  const mySideTotal = activeSide === "a" ? sideATotal : sideBTotal;
+  const otherSideTotal = activeSide === "a" ? sideBTotal : sideATotal;
+  const preview = getPredictedPayout(mySideTotal, otherSideTotal, existingAmount, Number(amountInput));
 
   // min/max apply to the cumulative wager, so for a top-up the remaining
   // room is what's left, not the raw bet-level limits.
@@ -85,9 +97,36 @@ export function WagerForm({
             step="0.01"
             required
             className="pl-6"
+            value={amountInput}
+            onChange={(e) => setAmountInput(e.target.value)}
           />
         </div>
       </div>
+
+      {preview && (
+        <div className="rounded-lg bg-secondary/50 p-3 space-y-1">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Predicted payout if {activeSideLabel} wins</span>
+            <span className="font-black tabular-nums">{formatCurrency(preview.payout)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Profit</span>
+            <span
+              className={`font-bold tabular-nums ${
+                preview.profit > 0 ? "text-emerald-400" : "text-muted-foreground"
+              }`}
+            >
+              {preview.profit > 0 ? "+" : ""}
+              {formatCurrency(preview.profit)}
+            </span>
+          </div>
+          {otherSideTotal === 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              No one's wagered {activeSide === "a" ? sideBLabel : sideALabel} yet, so you'd just get your stake back.
+            </p>
+          )}
+        </div>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
