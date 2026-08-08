@@ -12,9 +12,9 @@ import type { UserBetPoolPoint, Timeframe } from "@/lib/types";
 /**
  * A user's own wager, tracked against the pool split since they joined.
  * `data`/`referenceOdds`/`side` come from
- * lib/utils/betPool.ts#getUserPoolHistory. Leads with "Current Payout"
- * (what they'd get right now if this resolved their way) rather than $ P&L,
- * since that's the number people actually check a pari-mutuel bet for.
+ * lib/utils/betPool.ts#getUserPoolHistory. Leads with net profit/loss
+ * (signed, buy-in excluded) rather than gross payout -- the payout figure
+ * bundles the stake back in, which reads as bigger winnings than it is.
  */
 
 interface BetWagerChartProps {
@@ -53,28 +53,25 @@ export function BetWagerChart({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-black tracking-widest text-muted-foreground uppercase truncate">
-              {sideLabel ? `Current Payout · ${sideLabel}` : "Current Payout"}
+              {sideLabel ? `Net · ${sideLabel}` : "Net"}
             </p>
             {shown ? (
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black tabular-nums">
-                  {formatCurrency(shown.projectedPayout)}
-                </span>
-                <span
-                  className={cn(
-                    "text-xs font-bold tabular-nums",
-                    shown.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
-                  )}
-                >
-                  {shown.pnl >= 0 ? "+" : "−"}
-                  {formatCurrency(Math.abs(shown.pnl))}
-                </span>
-              </div>
+              <span
+                className={cn(
+                  "text-3xl font-black tabular-nums",
+                  shown.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}
+              >
+                {shown.pnl >= 0 ? "+" : "−"}
+                {formatCurrency(Math.abs(shown.pnl))}
+              </span>
             ) : (
               <span className="text-3xl font-black text-muted-foreground">—</span>
             )}
             <p className="text-xs text-muted-foreground">
-              {shown ? `${formatCurrency(shown.wager)} wagered` : "No wager yet"}
+              {shown
+                ? `${formatCurrency(shown.wager)} wagered · payout ${formatCurrency(shown.projectedPayout)}`
+                : "No wager yet"}
               {hovered && ` · ${formatTooltipTime(hovered.timestamp)}`}
             </p>
           </div>
@@ -94,8 +91,8 @@ export function BetWagerChart({
               <p className="text-muted-foreground">{formatTooltipTime(p.timestamp)}</p>
               <p className="font-bold tabular-nums">{Math.round(p.currentOdds)}% pool share</p>
               <p className={cn("tabular-nums", p.pnl >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                Payout {formatCurrency(p.projectedPayout)} ({p.pnl >= 0 ? "+" : "−"}
-                {formatCurrency(Math.abs(p.pnl))})
+                {p.pnl >= 0 ? "+" : "−"}
+                {formatCurrency(Math.abs(p.pnl))} net
               </p>
             </div>
           )}
