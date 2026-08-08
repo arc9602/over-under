@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Check, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,13 +77,16 @@ export function MarketResolutionPanel({
           }
         >
           <CardContent className="p-4 text-center">
-            <p className="text-2xl mb-1">{won ? "🏆" : brokeEven ? "🤝" : "💸"}</p>
-            <p className="font-black text-lg">
+            <p
+              className={`font-black text-2xl tabular-nums ${
+                brokeEven ? "" : won ? "text-emerald-400" : "text-destructive"
+              }`}
+            >
               {brokeEven
                 ? "Break-even"
                 : won
-                ? `You net +${formatCurrency(net)}`
-                : `You net −${formatCurrency(Math.abs(net))}`}
+                ? `+${formatCurrency(net)}`
+                : `−${formatCurrency(Math.abs(net))}`}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               Settled at <span className="font-medium text-foreground">{label}</span> — contracts
@@ -195,7 +199,8 @@ export function MarketResolutionPanel({
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={handleConfirm} disabled={isPending} className="font-bold">
-              ✓ Agree
+              <Check className="size-4" />
+              Agree
             </Button>
             <Button
               onClick={handleDispute}
@@ -203,7 +208,8 @@ export function MarketResolutionPanel({
               variant="outline"
               className="font-bold text-destructive hover:text-destructive"
             >
-              ✗ Dispute
+              <X className="size-4" />
+              Dispute
               {disputeCount > 0 && (
                 <span className="ml-1 text-[10px] text-muted-foreground">
                   ({3 - disputeCount} left)

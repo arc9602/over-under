@@ -4,9 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getMarketsForUser } from "@/lib/queries/markets";
 import { MarketCard } from "@/components/market/MarketCard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { getPosition, centsToDollars } from "@/lib/utils/marketBook";
 import type { MarketStatus, MarketWithBook } from "@/lib/types";
+
+const TRADING_STATUSES: MarketStatus[] = ["open", "active", "locked", "resolving"];
 
 const TABS: { value: string; label: string; statuses: MarketStatus[] | "all" }[] = [
   { value: "all", label: "All", statuses: "all" },
@@ -29,10 +34,21 @@ export default async function MarketsPage() {
     return markets.filter((m) => statuses.includes(m.status));
   }
 
+  const tradingMarkets = filterMarkets(markets, TRADING_STATUSES);
+  const totalAtRisk = tradingMarkets.reduce(
+    (sum, market) => sum + centsToDollars(getPosition(market.market_fills, user.id).costCents),
+    0
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-black">Markets</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black">Markets</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Trade the odds with your friends
+          </p>
+        </div>
         <Link
           href="/markets/new"
           className={buttonVariants({ className: "font-bold hidden sm:flex" })}
@@ -40,6 +56,25 @@ export default async function MarketsPage() {
           + New Market
         </Link>
       </div>
+
+      {markets.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Trading</p>
+              <p className="text-xl font-black tabular-nums">{tradingMarkets.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">At Risk</p>
+              <p className="text-xl font-black tabular-nums text-primary">
+                {formatCurrency(totalAtRisk)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs defaultValue="all">
         <TabsList className="w-full sm:w-auto">

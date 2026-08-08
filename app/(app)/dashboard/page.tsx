@@ -4,9 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getBetsForUser } from "@/lib/queries/bets";
 import { BetCard } from "@/components/bet/BetCard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { BetStatus, BetWithParticipants } from "@/lib/types";
+
+const LIVE_STATUSES: BetStatus[] = ["open", "active", "locked", "resolving"];
 
 const TABS: { value: string; label: string; statuses: BetStatus[] | "all" }[] = [
   { value: "all", label: "All", statuses: "all" },
@@ -29,14 +33,44 @@ export default async function DashboardPage() {
     return bets.filter((b) => statuses.includes(b.status));
   }
 
+  const liveBets = filterBets(bets, LIVE_STATUSES);
+  const totalAtRisk = liveBets.reduce((sum, bet) => {
+    const mine = bet.bet_participants.find((p) => p.user_id === user.id);
+    return sum + (mine?.amount ?? 0);
+  }, 0);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-black">My Bets</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black">My Bets</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Private prediction markets with friends
+          </p>
+        </div>
         <Link href="/bets/new" className={buttonVariants({ className: "font-bold hidden sm:flex" })}>
           + New Bet
         </Link>
       </div>
+
+      {bets.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Live Bets</p>
+              <p className="text-xl font-black tabular-nums">{liveBets.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">At Risk</p>
+              <p className="text-xl font-black tabular-nums text-primary">
+                {formatCurrency(totalAtRisk)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs defaultValue="all">
         <TabsList className="w-full sm:w-auto">

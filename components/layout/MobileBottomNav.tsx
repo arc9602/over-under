@@ -43,7 +43,7 @@ export function MobileBottomNav() {
     },
     {
       href: "/balances",
-      label: "Balances",
+      label: "Portfolio",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

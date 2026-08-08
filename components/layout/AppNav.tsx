@@ -15,7 +15,7 @@ export function AppNav({ profile }: AppNavProps) {
   const links = [
     { href: "/dashboard", label: "My Bets" },
     { href: "/markets", label: "Markets" },
-    { href: "/balances", label: "Balances" },
+    { href: "/balances", label: "Portfolio" },
   ];
 
   // The "+" button follows whichever section you're in.
