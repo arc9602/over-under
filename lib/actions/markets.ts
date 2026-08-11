@@ -35,7 +35,8 @@ export async function createMarket(formData: FormData) {
 
   const parsed = createMarketSchema.safeParse({
     title: formData.get("title"),
-    description: formData.get("description"),
+    // See createBet in lib/actions/bets.ts -- same null-vs-undefined trap.
+    description: formData.get("description") || undefined,
     yesLabel: formData.get("yesLabel"),
     noLabel: formData.get("noLabel"),
     maxContracts: formData.get("maxContracts") || undefined,

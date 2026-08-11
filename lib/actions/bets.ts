@@ -55,7 +55,10 @@ export async function createBet(formData: FormData) {
 
   const parsed = createBetSchema.safeParse({
     title: formData.get("title"),
-    description: formData.get("description"),
+    // `|| undefined` is load-bearing: FormData.get returns null for a key the
+    // form never set, and `.optional()` accepts undefined but rejects null --
+    // so a bet with no description failed to parse as "Invalid form data".
+    description: formData.get("description") || undefined,
     sideALabel: formData.get("sideALabel"),
     sideBLabel: formData.get("sideBLabel"),
     minWager: formData.get("minWager") || undefined,
@@ -120,7 +123,7 @@ export async function createBetWithOptions(formData: FormData) {
 
   const parsed = createBetWithOptionsSchema.safeParse({
     title: formData.get("title"),
-    description: formData.get("description"),
+    description: formData.get("description") || undefined,
     optionLabels: formData.getAll("optionLabels"),
     minWager: formData.get("minWager") || undefined,
     maxWager: formData.get("maxWager") || undefined,
