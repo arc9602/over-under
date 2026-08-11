@@ -5,30 +5,37 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { placeWager } from "@/lib/actions/bets";
+import { placeOptionWager } from "@/lib/actions/bets";
 import { getPredictedPayout } from "@/lib/utils/betPool";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import type { BetOption } from "@/lib/types";
 
-interface WagerFormProps {
+/**
+ * option_id-based counterpart of WagerForm, for a bet with 3+ options.
+ * Deliberately a separate component rather than branching inside
+ * WagerForm: the 2-option path is already working and well-exercised, and
+ * has zero reason to carry a second, option_id-based code path through its
+ * body just to share this file.
+ */
+
+interface OptionWagerFormProps {
   identifier: { betId: string } | { inviteCode: string };
-  sideALabel: string;
-  sideBLabel: string;
+  options: BetOption[];
+  /** optionId -> total wagered on it so far. */
+  optionTotals: Record<string, number>;
   minWager: number | null;
   maxWager: number | null;
-  /** Current pool totals, for the live predicted-payout preview. */
-  sideATotal: number;
-  sideBTotal: number;
-  /** If the user already has a wager on this bet, lock the side and just let them add more. */
-  existingSide?: "a" | "b";
+  /** If the user already has a wager on this bet, lock the option and just let them add more. */
+  existingOptionId?: string;
   existingAmount?: number;
 }
 
-export function WagerForm({
-  identifier, sideALabel, sideBLabel, minWager, maxWager, sideATotal, sideBTotal,
-  existingSide, existingAmount = 0,
-}: WagerFormProps) {
+export function OptionWagerForm({
+  identifier, options, optionTotals, minWager, maxWager,
+  existingOptionId, existingAmount = 0,
+}: OptionWagerFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [side, setSide] = useState<"a" | "b">(existingSide ?? "a");
+  const [optionId, setOptionId] = useState<string>(existingOptionId ?? options[0]?.id ?? "");
   const [amountInput, setAmountInput] = useState("");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -36,21 +43,23 @@ export function WagerForm({
     const amount = Number(amountInput);
     startTransition(async () => {
       // On success this redirects, so only the failure path returns here.
-      const result = await placeWager(identifier, existingSide ?? side, amount);
+      const result = await placeOptionWager(identifier, existingOptionId ?? optionId, amount);
       if (result?.error) toast.error(result.error);
     });
   }
 
-  const activeSide = existingSide ?? side;
-  const activeSideLabel = activeSide === "a" ? sideALabel : sideBLabel;
-  const mySideTotal = activeSide === "a" ? sideATotal : sideBTotal;
-  const otherSideTotal = activeSide === "a" ? sideBTotal : sideATotal;
-  const preview = getPredictedPayout(mySideTotal, otherSideTotal, existingAmount, Number(amountInput));
+  const activeOptionId = existingOptionId ?? optionId;
+  const activeOption = options.find((o) => o.id === activeOptionId);
+  const mySideTotal = optionTotals[activeOptionId] ?? 0;
+  const otherTotal = options
+    .filter((o) => o.id !== activeOptionId)
+    .reduce((sum, o) => sum + (optionTotals[o.id] ?? 0), 0);
+  const preview = getPredictedPayout(mySideTotal, otherTotal, existingAmount, Number(amountInput));
 
   // min/max apply to the cumulative wager, so for a top-up the remaining
   // room is what's left, not the raw bet-level limits.
   const remainingMax = maxWager != null ? Math.max(0, maxWager - existingAmount) : undefined;
-  const limitsText = existingSide
+  const limitsText = existingOptionId
     ? maxWager != null
       ? `up to $${remainingMax!.toFixed(2)} more (max $${maxWager.toFixed(2)} total)`
       : ""
@@ -63,35 +72,40 @@ export function WagerForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {existingSide ? (
+      {existingOptionId ? (
         <p className="text-sm text-muted-foreground">
-          Adding to your <span className="font-bold text-foreground">{existingSide === "a" ? sideALabel : sideBLabel}</span> wager
+          Adding to your <span className="font-bold text-foreground">{activeOption?.label}</span> wager
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant={side === "a" ? "default" : "outline"} onClick={() => setSide("a")}>
-            {sideALabel}
-          </Button>
-          <Button type="button" variant={side === "b" ? "default" : "outline"} onClick={() => setSide("b")}>
-            {sideBLabel}
-          </Button>
+          {options.map((o) => (
+            <Button
+              key={o.id}
+              type="button"
+              variant={optionId === o.id ? "default" : "outline"}
+              onClick={() => setOptionId(o.id)}
+              className="truncate"
+            >
+              {o.label}
+            </Button>
+          ))}
         </div>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="amount">
-          {existingSide ? "Amount to add" : "Your wager"}
+        <Label htmlFor="option-amount">
+          {existingOptionId ? "Amount to add" : "Your wager"}
           {limitsText ? ` (${limitsText})` : ""}
         </Label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
           <Input
-            id="amount"
+            id="option-amount"
             name="amount"
             type="number"
             placeholder="20.00"
             min={0.01}
-            max={existingSide ? remainingMax : maxWager ?? undefined}
+            max={existingOptionId ? remainingMax : maxWager ?? undefined}
             step="0.01"
             required
             className="pl-6"
@@ -101,10 +115,10 @@ export function WagerForm({
         </div>
       </div>
 
-      {preview && (
+      {preview && activeOption && (
         <div className="rounded-lg bg-secondary/50 p-3 space-y-1">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Predicted payout if {activeSideLabel} wins</span>
+            <span className="text-muted-foreground">Predicted payout if {activeOption.label} wins</span>
             <span className="font-black tabular-nums">{formatCurrency(preview.payout)}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
@@ -118,16 +132,16 @@ export function WagerForm({
               {formatCurrency(preview.profit)}
             </span>
           </div>
-          {otherSideTotal === 0 && (
+          {otherTotal === 0 && (
             <p className="text-[11px] text-muted-foreground">
-              No one's wagered {activeSide === "a" ? sideBLabel : sideALabel} yet, so you'd just get your stake back.
+              No one's wagered another option yet, so you'd just get your stake back.
             </p>
           )}
         </div>
       )}
 
       <Button type="submit" className="w-full font-black text-base py-6" disabled={isPending}>
-        {isPending ? "Placing wager…" : existingSide ? "Add to Wager" : "Place Wager"}
+        {isPending ? "Placing wager…" : existingOptionId ? "Add to Wager" : "Place Wager"}
       </Button>
     </form>
   );

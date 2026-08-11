@@ -49,6 +49,24 @@ function BookSide({
 
 export function OrderBook({ orders, yesLabel, noLabel }: OrderBookProps) {
   const best = getBestPrices(orders);
+  const isEmpty =
+    getBookLevels(orders, "yes").length === 0 && getBookLevels(orders, "no").length === 0;
+
+  // A brand-new market would otherwise stack four separate "nothing here"
+  // messages (two price tiles + two depth columns). Say it once instead.
+  if (isEmpty) {
+    return (
+      <Card>
+        <CardContent className="p-4 py-8 text-center space-y-1">
+          <p className="text-sm font-bold">The book is empty</p>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+            No one has posted an order yet. Post the first one and it&apos;ll rest here until
+            someone takes the other side.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

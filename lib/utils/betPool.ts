@@ -1,8 +1,18 @@
-import type { BetParticipant, Profile } from "@/lib/types";
+import type { Bet, BetOption, BetParticipant, Profile } from "@/lib/types";
 import type { BetPoolPoint, UserBetPoolPoint } from "@/lib/types/charts";
 
 type Participant = BetParticipant & { profiles: Profile };
 
+/**
+ * Every function above this line (getSideTotals through getUserPoolHistory)
+ * is the 2-option path only -- side is always "a"/"b" there, never null, by
+ * construction: place_wager rejects any bet with more than two
+ * lib/utils/betPool.ts#bet_options rows, so a participant row this old code
+ * ever sees is guaranteed to have side set. The option-based equivalents
+ * below (getOptionTotals, getOptionPariMutuelPreview) are the 3+-option
+ * path, keyed on option_id instead. getPredictedPayout doesn't need an
+ * option-based twin -- it already just takes numbers, not sides.
+ */
 export function getSideTotals(participants: Participant[], side: "a" | "b") {
   const rows = participants.filter((p) => p.side === side);
   const total = rows.reduce((sum, p) => sum + p.amount, 0);
@@ -147,4 +157,59 @@ export function getUserPoolHistory(participants: Participant[], userId: string):
   }
 
   return { points, side, referenceOdds };
+}
+
+/**
+ * A bet's option list, sorted for display. Every bet has bet_options rows
+ * from the moment it's created (a trigger backfills options 0/1 from
+ * side_a_label/side_b_label for every bets INSERT -- see migration 012),
+ * so the empty-array fallback below is defensive, not an expected path.
+ */
+export function getBetOptions(bet: Pick<Bet, "side_a_label" | "side_b_label"> & {
+  bet_options: BetOption[];
+}): BetOption[] {
+  if (bet.bet_options.length > 0) {
+    return [...bet.bet_options].sort((a, b) => a.sort_order - b.sort_order);
+  }
+  // Should be unreachable given the backfill trigger; kept as a fallback
+  // rather than letting a rendering path crash on an empty option list.
+  return [
+    { id: "a", bet_id: "", label: bet.side_a_label, sort_order: 0, created_at: "" },
+    { id: "b", bet_id: "", label: bet.side_b_label, sort_order: 1, created_at: "" },
+  ];
+}
+
+/** option_id-keyed equivalent of getSideTotals, for a 3+-option bet. */
+export function getOptionTotals(participants: Participant[], optionId: string) {
+  const rows = participants.filter((p) => p.option_id === optionId);
+  const total = rows.reduce((sum, p) => sum + p.amount, 0);
+  return { total, count: rows.length, rows };
+}
+
+/**
+ * option_id-keyed equivalent of getPariMutuelPreview. Same formula, same
+ * "client-side preview only" caveat -- confirm_option_resolution is the
+ * authoritative payout source.
+ */
+export function getOptionPariMutuelPreview(
+  participants: Participant[],
+  winnerOptionId: string,
+  userId: string
+): { isParticipant: boolean; wager: number; payout: number; profit: number } {
+  const { total: winTotal } = getOptionTotals(participants, winnerOptionId);
+  const loseTotal = participants
+    .filter((p) => p.option_id != null && p.option_id !== winnerOptionId)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const mine = participants.find((p) => p.user_id === userId);
+  if (!mine || winTotal === 0) {
+    return { isParticipant: false, wager: 0, payout: 0, profit: 0 };
+  }
+
+  if (mine.option_id !== winnerOptionId) {
+    return { isParticipant: true, wager: mine.amount, payout: 0, profit: -mine.amount };
+  }
+
+  const profit = (mine.amount / winTotal) * loseTotal;
+  return { isParticipant: true, wager: mine.amount, payout: mine.amount + profit, profit };
 }

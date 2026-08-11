@@ -7,8 +7,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { BetStatusBadge } from "@/components/bet/BetStatusBadge";
 import { CountdownTimer } from "@/components/bet/CountdownTimer";
 import { WagerForm } from "@/components/bet/WagerForm";
+import { OptionWagerForm } from "@/components/bet/OptionWagerForm";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { getSideTotals } from "@/lib/utils/betPool";
+import { getSideTotals, getBetOptions, getOptionTotals } from "@/lib/utils/betPool";
 
 interface Props {
   params: Promise<{ inviteCode: string }>;
@@ -43,10 +44,13 @@ export default async function InviteLandingPage({ params }: Props) {
     if (isParticipant) redirect(`/bets/${bet.id}`);
   }
 
-  const creatorName = bet.creator.display_name ?? bet.creator.username;
-  const sideA = getSideTotals(bet.bet_participants, "a");
-  const sideB = getSideTotals(bet.bet_participants, "b");
-  const totalPool = sideA.total + sideB.total;
+  const options = getBetOptions(bet);
+  const isTwoOption = options.length === 2;
+  const optionSummaries = options.map((o) => ({
+    ...o,
+    ...getOptionTotals(bet.bet_participants, o.id),
+  }));
+  const totalPool = optionSummaries.reduce((sum, o) => sum + o.total, 0);
 
   const canJoin = bet.status === "open" || bet.status === "active";
 
@@ -63,7 +67,8 @@ export default async function InviteLandingPage({ params }: Props) {
         <div className="text-center">
           <p className="text-xl font-black tracking-tight text-primary mb-1">OVER/UNDER</p>
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{creatorName}</span> started a bet
+            <span className="font-medium text-foreground">{bet.creator.display_name ?? bet.creator.username}</span>{" "}
+            started a bet
           </p>
         </div>
 
@@ -79,16 +84,17 @@ export default async function InviteLandingPage({ params }: Props) {
             )}
 
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-secondary rounded p-2 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{bet.side_a_label}</p>
-                <p className="font-bold text-sm">{formatCurrency(sideA.total)}</p>
-                <p className="text-xs text-muted-foreground">{sideA.count} {sideA.count === 1 ? "person" : "people"}</p>
-              </div>
-              <div className="bg-secondary rounded p-2 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{bet.side_b_label}</p>
-                <p className="font-bold text-sm">{formatCurrency(sideB.total)}</p>
-                <p className="text-xs text-muted-foreground">{sideB.count} {sideB.count === 1 ? "person" : "people"}</p>
-              </div>
+              {optionSummaries.map((o) => (
+                <div key={o.id} className="bg-secondary rounded p-2 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
+                    {o.label}
+                  </p>
+                  <p className="font-bold text-sm">{formatCurrency(o.total)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {o.count} {o.count === 1 ? "person" : "people"}
+                  </p>
+                </div>
+              ))}
             </div>
 
             <div className="flex items-center justify-between">
@@ -101,15 +107,25 @@ export default async function InviteLandingPage({ params }: Props) {
 
         {canJoin ? (
           user ? (
-            <WagerForm
-              identifier={{ inviteCode }}
-              sideALabel={bet.side_a_label}
-              sideBLabel={bet.side_b_label}
-              minWager={bet.min_wager}
-              maxWager={bet.max_wager}
-              sideATotal={sideA.total}
-              sideBTotal={sideB.total}
-            />
+            isTwoOption ? (
+              <WagerForm
+                identifier={{ inviteCode }}
+                sideALabel={bet.side_a_label}
+                sideBLabel={bet.side_b_label}
+                minWager={bet.min_wager}
+                maxWager={bet.max_wager}
+                sideATotal={getSideTotals(bet.bet_participants, "a").total}
+                sideBTotal={getSideTotals(bet.bet_participants, "b").total}
+              />
+            ) : (
+              <OptionWagerForm
+                identifier={{ inviteCode }}
+                options={options}
+                optionTotals={Object.fromEntries(optionSummaries.map((o) => [o.id, o.total]))}
+                minWager={bet.min_wager}
+                maxWager={bet.max_wager}
+              />
+            )
           ) : (
             <Link
               href={`/login?redirect=/bet/${inviteCode}`}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import { Check, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,6 @@ export function MarketResolutionPanel({
   netIou,
 }: MarketResolutionPanelProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
   const pendingResolution = market.market_resolutions.find((r) => r.status === "pending");
 
@@ -34,28 +34,32 @@ export function MarketResolutionPanel({
   }
 
   function handlePropose(outcome: MarketSide) {
-    setError(null);
     startTransition(async () => {
       const result = await proposeMarketResolution(market.id, outcome);
-      if (result?.error) setError(result.error);
+      if (result?.error) toast.error(result.error);
+      else toast.success(`Proposed ${outcomeLabel(outcome)}`, {
+        description: "Another trader has to confirm before contracts pay out.",
+      });
     });
   }
 
   function handleConfirm() {
     if (!pendingResolution) return;
-    setError(null);
     startTransition(async () => {
       const result = await confirmMarketResolution(pendingResolution.id, market.id);
-      if (result?.error) setError(result.error);
+      if (result?.error) toast.error(result.error);
+      else toast.success("Market settled — contracts paid out at 100¢");
     });
   }
 
   function handleDispute() {
     if (!pendingResolution) return;
-    setError(null);
     startTransition(async () => {
       const result = await disputeMarketResolution(pendingResolution.id, market.id);
-      if (result?.error) setError(result.error);
+      if (result?.error) toast.error(result.error);
+      else toast.info("Resolution disputed", {
+        description: "The market is back to awaiting resolution.",
+      });
     });
   }
 
@@ -149,7 +153,7 @@ export function MarketResolutionPanel({
               );
             })}
           </div>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+
         </CardContent>
       </Card>
     );
@@ -181,7 +185,7 @@ export function MarketResolutionPanel({
             <p className="text-xs text-muted-foreground mt-1">
               Waiting for another trader to confirm.
             </p>
-            {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+
           </CardContent>
         </Card>
       );
@@ -217,7 +221,7 @@ export function MarketResolutionPanel({
               )}
             </Button>
           </div>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+
         </CardContent>
       </Card>
     );

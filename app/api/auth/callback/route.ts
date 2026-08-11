@@ -2,13 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/database.types";
+import { safeRedirectPath } from "@/lib/utils/safeRedirect";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const cookieStore = await cookies();
-  const redirect =
-    searchParams.get("redirect") ?? cookieStore.get("oauth_redirect")?.value ?? "/dashboard";
+  const redirect = safeRedirectPath(
+    searchParams.get("redirect") ?? cookieStore.get("oauth_redirect")?.value
+  );
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);

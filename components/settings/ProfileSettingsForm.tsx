@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,20 +14,16 @@ interface ProfileSettingsFormProps {
 
 export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setSuccess(false);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = await updateProfile(formData);
       if (result?.error) {
-        setError(result.error);
+        toast.error(result.error);
       } else {
-        setSuccess(true);
+        toast.success("Profile updated");
       }
     });
   }
@@ -60,9 +57,6 @@ export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
           }}
         />
       </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {success && <p className="text-sm text-primary">Saved.</p>}
 
       <Button type="submit" className="w-full font-bold" disabled={isPending}>
         {isPending ? "Saving…" : "Save Changes"}

@@ -4,9 +4,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-
-const priceSchema = z.coerce.number().int().min(1).max(99);
-const quantitySchema = z.coerce.number().int().positive().max(100000);
+import { uuidSchema, inviteCodeSchema, priceSchema, quantitySchema } from "@/lib/validation/common";
 
 const createMarketSchema = z
   .object({
@@ -104,14 +102,20 @@ export async function placeMarketOrder(
 
   const parsedPrice = priceSchema.safeParse(limitPrice);
   const parsedQuantity = quantitySchema.safeParse(quantity);
+  const parsedSide = z.enum(["yes", "no"]).safeParse(side);
+  const parsedIdentifier = "marketId" in identifier
+    ? uuidSchema.safeParse(identifier.marketId)
+    : inviteCodeSchema.safeParse(identifier.inviteCode);
   if (!parsedPrice.success) return { error: "Price must be a whole number of cents from 1 to 99" };
   if (!parsedQuantity.success) return { error: "Quantity must be at least 1 contract" };
+  if (!parsedSide.success) return { error: "Invalid side" };
+  if (!parsedIdentifier.success) return { error: "Market not found" };
 
   const serviceClient = await createServiceClient();
   const { data: market } = await serviceClient
     .from("markets")
     .select("id")
-    .match("marketId" in identifier ? { id: identifier.marketId } : { invite_code: identifier.inviteCode })
+    .match("marketId" in identifier ? { id: parsedIdentifier.data } : { invite_code: parsedIdentifier.data })
     .single();
 
   if (!market) return { error: "Market not found" };
@@ -119,7 +123,7 @@ export async function placeMarketOrder(
   const { data, error } = await serviceClient.rpc("place_market_order", {
     p_market_id: market.id,
     p_user_id: user.id,
-    p_side: side,
+    p_side: parsedSide.data,
     p_limit_price: parsedPrice.data,
     p_quantity: parsedQuantity.data,
   });
@@ -148,9 +152,12 @@ export async function cancelMarketOrder(orderId: string, marketId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const parsedOrderId = uuidSchema.safeParse(orderId);
+  if (!parsedOrderId.success) return { error: "Order not found" };
+
   const serviceClient = await createServiceClient();
   const { error } = await serviceClient.rpc("cancel_market_order", {
-    p_order_id: orderId,
+    p_order_id: parsedOrderId.data,
     p_user_id: user.id,
   });
 
@@ -165,9 +172,12 @@ export async function lockMarket(marketId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const parsedId = uuidSchema.safeParse(marketId);
+  if (!parsedId.success) return { error: "Market not found" };
+
   const serviceClient = await createServiceClient();
   const { error } = await serviceClient.rpc("lock_market", {
-    p_market_id: marketId,
+    p_market_id: parsedId.data,
     p_user_id: user.id,
   });
 
@@ -182,10 +192,13 @@ export async function cancelMarket(marketId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const parsedId = uuidSchema.safeParse(marketId);
+  if (!parsedId.success) return { error: "Market not found" };
+
   const { error } = await supabase
     .from("markets")
     .update({ status: "cancelled" })
-    .eq("id", marketId)
+    .eq("id", parsedId.data)
     .eq("creator_id", user.id)
     .in("status", ["open", "active"]);
 

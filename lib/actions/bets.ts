@@ -4,6 +4,28 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  uuidSchema,
+  inviteCodeSchema,
+  moneySchema,
+  betSideSchema,
+  firstIssue,
+} from "@/lib/validation/common";
+
+const createBetWithOptionsSchema = z.object({
+  title: z.string().min(3).max(200),
+  description: z.string().max(500).optional(),
+  optionLabels: z
+    .array(z.string().trim().min(1).max(50))
+    .min(2)
+    .max(10)
+    .refine((labels) => new Set(labels.map((l) => l.toLowerCase())).size === labels.length, {
+      message: "Option labels must be unique",
+    }),
+  minWager: z.coerce.number().positive().max(100000).optional(),
+  maxWager: z.coerce.number().positive().max(100000).optional(),
+  deadline: z.string().optional(),
+});
 
 const createBetSchema = z
   .object({
@@ -85,6 +107,49 @@ export async function createBet(formData: FormData) {
   redirect(`/bets/${bet.id}`);
 }
 
+/**
+ * Multi-option counterpart of createBet, used when the wizard has 3+ option
+ * inputs filled in. Unlike createBet, there's no "wager on this myself now"
+ * shortcut here -- the creator wagers as a normal follow-up action on the
+ * bet's own page, same as any other participant.
+ */
+export async function createBetWithOptions(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const parsed = createBetWithOptionsSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description"),
+    optionLabels: formData.getAll("optionLabels"),
+    minWager: formData.get("minWager") || undefined,
+    maxWager: formData.get("maxWager") || undefined,
+    deadline: formData.get("deadline") || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: "Invalid form data", details: parsed.error.flatten() };
+  }
+
+  const { title, description, optionLabels, minWager, maxWager, deadline } = parsed.data;
+
+  const serviceClient = await createServiceClient();
+  const { data: betId, error } = await serviceClient.rpc("create_bet_with_options", {
+    p_creator_id: user.id,
+    p_title: title,
+    p_description: description ?? null,
+    p_option_labels: optionLabels,
+    p_min_wager: minWager ?? null,
+    p_max_wager: maxWager ?? null,
+    p_deadline: deadline ? new Date(deadline).toISOString() : null,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  redirect(`/bets/${betId}`);
+}
+
 export async function placeWager(
   identifier: { betId: string } | { inviteCode: string },
   side: "a" | "b",
@@ -95,11 +160,20 @@ export async function placeWager(
   const redirectTarget = "inviteCode" in identifier ? `/bet/${identifier.inviteCode}` : `/bets/${identifier.betId}`;
   if (!user) redirect(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
 
+  const parsedSide = betSideSchema.safeParse(side);
+  const parsedAmount = moneySchema.safeParse(amount);
+  const parsedIdentifier = "betId" in identifier
+    ? uuidSchema.safeParse(identifier.betId)
+    : inviteCodeSchema.safeParse(identifier.inviteCode);
+  if (!parsedSide.success) return { error: "Invalid side" };
+  if (!parsedAmount.success) return { error: firstIssue(parsedAmount.error) };
+  if (!parsedIdentifier.success) return { error: "Bet not found" };
+
   const serviceClient = await createServiceClient();
   const { data: bet } = await serviceClient
     .from("bets")
     .select("id")
-    .match("betId" in identifier ? { id: identifier.betId } : { invite_code: identifier.inviteCode })
+    .match("betId" in identifier ? { id: parsedIdentifier.data } : { invite_code: parsedIdentifier.data })
     .single();
 
   if (!bet) return { error: "Bet not found" };
@@ -107,8 +181,51 @@ export async function placeWager(
   const { error } = await serviceClient.rpc("place_wager", {
     p_bet_id: bet.id,
     p_user_id: user.id,
-    p_side: side,
-    p_amount: amount,
+    p_side: parsedSide.data,
+    p_amount: parsedAmount.data,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/bets/${bet.id}`);
+  redirect(`/bets/${bet.id}`);
+}
+
+/** option_id-based counterpart of placeWager, for a bet with 3+ options. */
+export async function placeOptionWager(
+  identifier: { betId: string } | { inviteCode: string },
+  optionId: string,
+  amount: number
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const redirectTarget = "inviteCode" in identifier ? `/bet/${identifier.inviteCode}` : `/bets/${identifier.betId}`;
+  if (!user) redirect(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
+
+  const parsedOptionId = uuidSchema.safeParse(optionId);
+  const parsedAmount = moneySchema.safeParse(amount);
+  const parsedIdentifier = "betId" in identifier
+    ? uuidSchema.safeParse(identifier.betId)
+    : inviteCodeSchema.safeParse(identifier.inviteCode);
+  if (!parsedOptionId.success) return { error: "Invalid option" };
+  if (!parsedAmount.success) return { error: firstIssue(parsedAmount.error) };
+  if (!parsedIdentifier.success) return { error: "Bet not found" };
+
+  const serviceClient = await createServiceClient();
+  const { data: bet } = await serviceClient
+    .from("bets")
+    .select("id")
+    .match("betId" in identifier ? { id: parsedIdentifier.data } : { invite_code: parsedIdentifier.data })
+    .single();
+
+  if (!bet) return { error: "Bet not found" };
+
+  const { error } = await serviceClient.rpc("place_option_wager", {
+    p_bet_id: bet.id,
+    p_user_id: user.id,
+    p_option_id: parsedOptionId.data,
+    p_amount: parsedAmount.data,
   });
 
   if (error) return { error: error.message };
@@ -123,10 +240,13 @@ export async function lockBet(betId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const parsedId = uuidSchema.safeParse(betId);
+  if (!parsedId.success) return { error: "Bet not found" };
+
   const { data, error } = await supabase
     .from("bets")
     .update({ status: "locked" })
-    .eq("id", betId)
+    .eq("id", parsedId.data)
     .eq("creator_id", user.id)
     .eq("status", "active")
     .select("id")
@@ -145,10 +265,13 @@ export async function cancelBet(betId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const parsedId = uuidSchema.safeParse(betId);
+  if (!parsedId.success) return { error: "Bet not found" };
+
   const { error } = await supabase
     .from("bets")
     .update({ status: "cancelled" })
-    .eq("id", betId)
+    .eq("id", parsedId.data)
     .eq("creator_id", user.id)
     .in("status", ["open", "active"]);
 

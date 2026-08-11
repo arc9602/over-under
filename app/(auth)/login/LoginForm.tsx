@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { safeRedirectPath } from "@/lib/utils/safeRedirect";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const redirect = safeRedirectPath(searchParams.get("redirect"));
   const callbackError = searchParams.get("error");
 
   const [error, setError] = useState<string | null>(

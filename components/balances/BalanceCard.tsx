@@ -23,16 +23,22 @@ export function BalanceCard({ balance }: BalanceCardProps) {
     <>
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
+          <div className="flex items-center justify-between gap-3">
+            {/* min-w-0 lets the name truncate instead of shoving the button
+                off-screen on a narrow viewport. */}
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="h-9 w-9 shrink-0">
                 <AvatarFallback className="bg-secondary text-foreground text-xs font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-bold text-sm">{friendName}</p>
-                <p className={`text-xs font-medium ${youOwe ? "text-destructive" : "text-emerald-400"}`}>
+              <div className="min-w-0">
+                <p className="font-bold text-sm truncate">{friendName}</p>
+                <p
+                  className={`text-xs font-medium tabular-nums ${
+                    youOwe ? "text-destructive" : "text-emerald-400"
+                  }`}
+                >
                   {youOwe
                     ? `You owe ${formatCurrency(amount)}`
                     : `Owes you ${formatCurrency(amount)}`}
@@ -44,7 +50,7 @@ export function BalanceCard({ balance }: BalanceCardProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => setShowModal(true)}
-                className="font-bold text-xs"
+                className="font-bold text-xs shrink-0"
               >
                 Settle Up
               </Button>

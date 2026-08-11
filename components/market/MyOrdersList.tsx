@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cancelMarketOrder } from "@/lib/actions/markets";
@@ -23,16 +24,15 @@ export function MyOrdersList({
   noLabel,
 }: MyOrdersListProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
   const mine = getMyOpenOrders(orders, currentUserId);
   if (mine.length === 0) return null;
 
   function handleCancel(orderId: string) {
-    setError(null);
     startTransition(async () => {
       const result = await cancelMarketOrder(orderId, marketId);
-      if (result?.error) setError(result.error);
+      if (result?.error) toast.error(result.error);
+      else toast.success("Order cancelled");
     });
   }
 
@@ -67,7 +67,6 @@ export function MyOrdersList({
             </li>
           ))}
         </ul>
-        {error && <p className="text-sm text-destructive">{error}</p>}
       </CardContent>
     </Card>
   );

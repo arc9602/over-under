@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,6 @@ const STEPS = ["Details", "Outcomes", "Resolution", "Review"];
 
 export function CreateMarketForm() {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
 
   const [title, setTitle] = useState("");
@@ -41,7 +41,6 @@ export function CreateMarketForm() {
   const canAdvance = step === 0 ? titleValid : step === 1 ? labelsValid : true;
 
   function handleSubmit() {
-    setError(null);
     const formData = new FormData();
     formData.set("title", title.trim());
     if (description.trim()) formData.set("description", description.trim());
@@ -56,9 +55,10 @@ export function CreateMarketForm() {
     }
 
     startTransition(async () => {
+      // On success this redirects, so only the failure path returns here.
       const result = await createMarket(formData);
       if (result?.error) {
-        setError(result.error);
+        toast.error(result.error);
         setStep(0);
       }
     });
@@ -306,8 +306,6 @@ export function CreateMarketForm() {
           </dl>
         </div>
       )}
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex items-center gap-2">
         {step > 0 && (

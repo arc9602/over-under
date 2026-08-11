@@ -6,8 +6,9 @@ import { BetDetail } from "@/components/bet/BetDetail";
 import { ResolutionPanel } from "@/components/bet/ResolutionPanel";
 import { InviteSharePanel } from "@/components/bet/InviteSharePanel";
 import { WagerForm } from "@/components/bet/WagerForm";
+import { OptionWagerForm } from "@/components/bet/OptionWagerForm";
 import { cancelBet, lockBet } from "@/lib/actions/bets";
-import { getSideTotals } from "@/lib/utils/betPool";
+import { getSideTotals, getBetOptions, getOptionTotals } from "@/lib/utils/betPool";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -50,19 +51,37 @@ export default async function BetDetailPage({ params }: Props) {
         <InviteSharePanel inviteCode={bet.invite_code} />
       )}
 
-      {canWager && (
-        <WagerForm
-          identifier={{ betId }}
-          sideALabel={bet.side_a_label}
-          sideBLabel={bet.side_b_label}
-          minWager={bet.min_wager}
-          maxWager={bet.max_wager}
-          sideATotal={getSideTotals(bet.bet_participants, "a").total}
-          sideBTotal={getSideTotals(bet.bet_participants, "b").total}
-          existingSide={myParticipation?.side}
-          existingAmount={myParticipation?.amount}
-        />
-      )}
+      {canWager && (() => {
+        const options = getBetOptions(bet);
+        if (options.length === 2) {
+          return (
+            <WagerForm
+              identifier={{ betId }}
+              sideALabel={bet.side_a_label}
+              sideBLabel={bet.side_b_label}
+              minWager={bet.min_wager}
+              maxWager={bet.max_wager}
+              sideATotal={getSideTotals(bet.bet_participants, "a").total}
+              sideBTotal={getSideTotals(bet.bet_participants, "b").total}
+              existingSide={myParticipation?.side ?? undefined}
+              existingAmount={myParticipation?.amount}
+            />
+          );
+        }
+        return (
+          <OptionWagerForm
+            identifier={{ betId }}
+            options={options}
+            optionTotals={Object.fromEntries(
+              options.map((o) => [o.id, getOptionTotals(bet.bet_participants, o.id).total])
+            )}
+            minWager={bet.min_wager}
+            maxWager={bet.max_wager}
+            existingOptionId={myParticipation?.option_id ?? undefined}
+            existingAmount={myParticipation?.amount}
+          />
+        );
+      })()}
 
       {canLock && (
         <form

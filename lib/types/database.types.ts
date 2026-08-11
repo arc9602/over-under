@@ -97,7 +97,8 @@ export type Database = {
           id: string;
           bet_id: string;
           user_id: string;
-          side: "a" | "b";
+          side: "a" | "b" | null;
+          option_id: string | null;
           amount: number;
           joined_at: string;
         };
@@ -105,7 +106,8 @@ export type Database = {
           id?: string;
           bet_id: string;
           user_id: string;
-          side: "a" | "b";
+          side?: "a" | "b" | null;
+          option_id?: string | null;
           amount: number;
           joined_at?: string;
         };
@@ -113,7 +115,8 @@ export type Database = {
           id?: string;
           bet_id?: string;
           user_id?: string;
-          side?: "a" | "b";
+          side?: "a" | "b" | null;
+          option_id?: string | null;
           amount?: number;
           joined_at?: string;
         };
@@ -131,6 +134,45 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bet_participants_option_id_fkey";
+            columns: ["option_id"];
+            isOneToOne: false;
+            referencedRelation: "bet_options";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      bet_options: {
+        Row: {
+          id: string;
+          bet_id: string;
+          label: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          bet_id: string;
+          label: string;
+          sort_order: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          bet_id?: string;
+          label?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bet_options_bet_id_fkey";
+            columns: ["bet_id"];
+            isOneToOne: false;
+            referencedRelation: "bets";
+            referencedColumns: ["id"];
           }
         ];
       };
@@ -139,7 +181,8 @@ export type Database = {
           id: string;
           bet_id: string;
           proposed_by: string;
-          proposed_winner_side: "a" | "b";
+          proposed_winner_side: "a" | "b" | null;
+          proposed_winner_option_id: string | null;
           confirmed_by: string | null;
           status: ResolutionStatus;
           created_at: string;
@@ -149,7 +192,8 @@ export type Database = {
           id?: string;
           bet_id: string;
           proposed_by: string;
-          proposed_winner_side: "a" | "b";
+          proposed_winner_side?: "a" | "b" | null;
+          proposed_winner_option_id?: string | null;
           confirmed_by?: string | null;
           status?: ResolutionStatus;
           created_at?: string;
@@ -159,7 +203,8 @@ export type Database = {
           id?: string;
           bet_id?: string;
           proposed_by?: string;
-          proposed_winner_side?: "a" | "b";
+          proposed_winner_side?: "a" | "b" | null;
+          proposed_winner_option_id?: string | null;
           confirmed_by?: string | null;
           status?: ResolutionStatus;
           created_at?: string;
@@ -171,6 +216,13 @@ export type Database = {
             columns: ["bet_id"];
             isOneToOne: false;
             referencedRelation: "bets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "resolutions_proposed_winner_option_id_fkey";
+            columns: ["proposed_winner_option_id"];
+            isOneToOne: false;
+            referencedRelation: "bet_options";
             referencedColumns: ["id"];
           }
         ];
@@ -483,6 +535,39 @@ export type Database = {
         };
         Returns: undefined;
       };
+      create_bet_with_options: {
+        Args: {
+          p_creator_id: string;
+          p_title: string;
+          p_description: string | null;
+          p_option_labels: string[];
+          p_min_wager: number | null;
+          p_max_wager: number | null;
+          p_deadline: string | null;
+        };
+        Returns: string;
+      };
+      place_option_wager: {
+        Args: {
+          p_bet_id: string;
+          p_user_id: string;
+          p_option_id: string;
+          p_amount: number;
+        };
+        Returns: undefined;
+      };
+      propose_option_resolution: {
+        Args: {
+          p_bet_id: string;
+          p_proposer_id: string;
+          p_winner_option_id: string;
+        };
+        Returns: string;
+      };
+      confirm_option_resolution: {
+        Args: { p_resolution_id: string; p_confirmer_id: string };
+        Returns: undefined;
+      };
       place_market_order: {
         Args: {
           p_market_id: string;
@@ -513,6 +598,27 @@ export type Database = {
       dispute_market_resolution: {
         Args: { p_resolution_id: string; p_disputer_id: string };
         Returns: undefined;
+      };
+      check_rate_limit: {
+        Args: {
+          p_user_id: string;
+          p_action: string;
+          p_max_count: number;
+          p_window_seconds: number;
+        };
+        Returns: boolean;
+      };
+      record_ledger_transaction: {
+        Args: {
+          p_kind: "bet_settlement" | "market_settlement" | "debt_payment";
+          p_bet_id: string | null;
+          p_market_id: string | null;
+          p_increase_user_id: string;
+          p_decrease_user_id: string;
+          p_amount: number;
+          p_description?: string | null;
+        };
+        Returns: string;
       };
     };
     Enums: { [_ in never]: never };

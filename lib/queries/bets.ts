@@ -33,7 +33,8 @@ export async function getBetsForUser(userId: string): Promise<BetWithParticipant
       bet_participants (
         *,
         profiles (*)
-      )
+      ),
+      bet_options (*)
     `)
     .in("id", betIds)
     .order("created_at", { ascending: false });
@@ -68,6 +69,7 @@ export async function getBetById(betId: string): Promise<BetWithDetails | null> 
         *,
         profiles (*)
       ),
+      bet_options (*),
       resolutions (*)
     `)
     .eq("id", betId)
@@ -90,7 +92,8 @@ export async function getBetByInviteCode(inviteCode: string) {
       bet_participants (
         *,
         profiles (*)
-      )
+      ),
+      bet_options (*)
     `)
     .eq("invite_code", inviteCode)
     .single();

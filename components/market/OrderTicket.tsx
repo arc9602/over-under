@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,8 +38,6 @@ export function OrderTicket({
   maxContracts,
 }: OrderTicketProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [side, setSide] = useState<MarketSide>("yes");
   const [price, setPrice] = useState(50);
   const [quantity, setQuantity] = useState(10);
@@ -63,27 +62,27 @@ export function OrderTicket({
     setQuantity(Math.abs(position.net));
     const bestForSide = closingSide === "yes" ? best.yes : best.no;
     if (bestForSide) setPrice(bestForSide.price);
-    setNotice(null);
-    setError(null);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setNotice(null);
     startTransition(async () => {
       const result = await placeMarketOrder(identifier, side, price, quantity);
       if (result?.error) {
-        setError(result.error);
+        toast.error(result.error);
         return;
       }
       if (result?.success) {
-        setNotice(
-          result.filled > 0
-            ? `Filled ${result.filled} at ${formatCents(result.avgPrice ?? price)}` +
-                (result.resting > 0 ? ` · ${result.resting} resting on the book` : "")
-            : `No match yet — all ${result.resting} contracts are resting on the book`
-        );
+        if (result.filled > 0) {
+          toast.success(`Filled ${result.filled} at ${formatCents(result.avgPrice ?? price)}`, {
+            description:
+              result.resting > 0 ? `${result.resting} resting on the book` : undefined,
+          });
+        } else {
+          toast.info(`${result.resting} contracts resting on the book`, {
+            description: "No match yet — someone has to take the other side.",
+          });
+        }
       }
     });
   }
@@ -195,9 +194,6 @@ export function OrderTicket({
           {position.net > 0 ? noLabel : yesLabel} to offset
         </button>
       )}
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {notice && <p className="text-sm text-primary">{notice}</p>}
 
       <Button type="submit" className="w-full font-black text-base py-6" disabled={isPending}>
         {isPending

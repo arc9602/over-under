@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,6 @@ interface SettleUpModalProps {
 
 export function SettleUpModal({ balance, open, onClose }: SettleUpModalProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const amountOwed = Math.abs(balance.netAmount);
   const [amount, setAmount] = useState(amountOwed.toFixed(2));
 
@@ -31,12 +31,12 @@ export function SettleUpModal({ balance, open, onClose }: SettleUpModalProps) {
   const friendName = balance.friend.display_name ?? balance.friend.username;
 
   function handleSettle() {
-    setError(null);
     startTransition(async () => {
       const result = await markSettled(balance.friend.id, parseFloat(amount));
       if (result?.error) {
-        setError(result.error);
+        toast.error(result.error);
       } else {
+        toast.success(`Settled ${formatCurrency(parseFloat(amount))} with ${friendName}`);
         onClose();
       }
     });
@@ -72,7 +72,6 @@ export function SettleUpModal({ balance, open, onClose }: SettleUpModalProps) {
               Full balance: {formatCurrency(amountOwed)}
             </p>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isPending}>

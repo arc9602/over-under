@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import { Check, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { proposeResolution, confirmResolution, disputeResolution } from "@/lib/actions/resolutions";
+import {
+  proposeResolution,
+  confirmResolution,
+  disputeResolution,
+  proposeOptionResolution,
+  confirmOptionResolution,
+} from "@/lib/actions/resolutions";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { getPariMutuelPreview } from "@/lib/utils/betPool";
+import { getPariMutuelPreview, getOptionPariMutuelPreview, getBetOptions } from "@/lib/utils/betPool";
 import type { BetWithDetails } from "@/lib/types";
 
 interface ResolutionPanelProps {
@@ -17,44 +24,71 @@ interface ResolutionPanelProps {
 
 export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
+  const options = getBetOptions(bet);
+  const isTwoOption = options.length === 2;
   const pendingResolution = bet.resolutions.find((r) => r.status === "pending");
+  // dispute_resolution is shared by both paths (see lib/actions/resolutions.ts),
+  // so this is the only place that needs to tell them apart.
+  const isOptionResolution = (r: BetWithDetails["resolutions"][number]) =>
+    r.proposed_winner_option_id != null;
 
   function sideLabel(side: "a" | "b") {
     return side === "a" ? bet.side_a_label : bet.side_b_label;
   }
 
+  function optionLabel(optionId: string) {
+    return options.find((o) => o.id === optionId)?.label ?? "Unknown option";
+  }
+
   function handlePropose(winnerSide: "a" | "b") {
-    setError(null);
     startTransition(async () => {
       const result = await proposeResolution(bet.id, winnerSide);
-      if (result?.error) setError(result.error);
+      if (result?.error) toast.error(result.error);
+      else toast.success(`Proposed ${sideLabel(winnerSide)} as the winner`, {
+        description: "Another participant has to confirm before it settles.",
+      });
+    });
+  }
+
+  function handleProposeOption(winnerOptionId: string) {
+    startTransition(async () => {
+      const result = await proposeOptionResolution(bet.id, winnerOptionId);
+      if (result?.error) toast.error(result.error);
+      else toast.success(`Proposed ${optionLabel(winnerOptionId)} as the winner`, {
+        description: "Another participant has to confirm before it settles.",
+      });
     });
   }
 
   function handleConfirm() {
     if (!pendingResolution) return;
-    setError(null);
     startTransition(async () => {
-      const result = await confirmResolution(pendingResolution.id, bet.id);
-      if (result?.error) setError(result.error);
+      const result = isOptionResolution(pendingResolution)
+        ? await confirmOptionResolution(pendingResolution.id, bet.id)
+        : await confirmResolution(pendingResolution.id, bet.id);
+      if (result?.error) toast.error(result.error);
+      else toast.success("Bet settled — IOUs recorded");
     });
   }
 
   function handleDispute() {
     if (!pendingResolution) return;
-    setError(null);
     startTransition(async () => {
       const result = await disputeResolution(pendingResolution.id, bet.id);
-      if (result?.error) setError(result.error);
+      if (result?.error) toast.error(result.error);
+      else toast.info("Resolution disputed", {
+        description: "The bet is back to awaiting resolution.",
+      });
     });
   }
 
   if (bet.status === "resolved") {
     const confirmedResolution = bet.resolutions.find((r) => r.status === "confirmed");
     if (confirmedResolution) {
-      const label = sideLabel(confirmedResolution.proposed_winner_side);
+      const label = confirmedResolution.proposed_winner_option_id != null
+        ? optionLabel(confirmedResolution.proposed_winner_option_id)
+        : sideLabel(confirmedResolution.proposed_winner_side!);
       const net = netIou ?? 0;
       const won = net > 0;
       const broke_even = net === 0;
@@ -100,36 +134,59 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
         <CardContent className="p-4">
           <p className="text-xs font-black tracking-widest text-muted-foreground mb-3">WHO WON?</p>
           <div className="grid grid-cols-2 gap-2">
-            {(["a", "b"] as const).map((side) => {
-              const preview = getPariMutuelPreview(bet.bet_participants, side, currentUserId);
-              return (
-                <Button
-                  key={side}
-                  variant="outline"
-                  className="h-auto py-3 flex-col gap-1 hover:border-primary hover:bg-primary/5"
-                  onClick={() => handlePropose(side)}
-                  disabled={isPending}
-                >
-                  <span className="font-bold text-sm">{sideLabel(side)}</span>
-                  {preview.isParticipant && (
-                    <span className={`text-xs ${preview.profit >= 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
-                      {preview.profit >= 0
-                        ? `You'd net +${formatCurrency(preview.profit)}`
-                        : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
-                    </span>
-                  )}
-                </Button>
-              );
-            })}
+            {isTwoOption
+              ? (["a", "b"] as const).map((side) => {
+                  const preview = getPariMutuelPreview(bet.bet_participants, side, currentUserId);
+                  return (
+                    <Button
+                      key={side}
+                      variant="outline"
+                      className="h-auto py-3 flex-col gap-1 hover:border-primary hover:bg-primary/5"
+                      onClick={() => handlePropose(side)}
+                      disabled={isPending}
+                    >
+                      <span className="font-bold text-sm">{sideLabel(side)}</span>
+                      {preview.isParticipant && (
+                        <span className={`text-xs ${preview.profit >= 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                          {preview.profit >= 0
+                            ? `You'd net +${formatCurrency(preview.profit)}`
+                            : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })
+              : options.map((option) => {
+                  const preview = getOptionPariMutuelPreview(bet.bet_participants, option.id, currentUserId);
+                  return (
+                    <Button
+                      key={option.id}
+                      variant="outline"
+                      className="h-auto py-3 flex-col gap-1 hover:border-primary hover:bg-primary/5"
+                      onClick={() => handleProposeOption(option.id)}
+                      disabled={isPending}
+                    >
+                      <span className="font-bold text-sm truncate max-w-full">{option.label}</span>
+                      {preview.isParticipant && (
+                        <span className={`text-xs ${preview.profit >= 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                          {preview.profit >= 0
+                            ? `You'd net +${formatCurrency(preview.profit)}`
+                            : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
           </div>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
         </CardContent>
       </Card>
     );
   }
 
   if (bet.status === "resolving" && pendingResolution) {
-    const label = sideLabel(pendingResolution.proposed_winner_side);
+    const label = pendingResolution.proposed_winner_option_id != null
+      ? optionLabel(pendingResolution.proposed_winner_option_id)
+      : sideLabel(pendingResolution.proposed_winner_side!);
     const proposerProfile = bet.bet_participants.find(
       (p) => p.user_id === pendingResolution.proposed_by
     )?.profiles;
@@ -146,7 +203,6 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
               You proposed <span className="font-bold">{label}</span> as the winner.
             </p>
             <p className="text-xs text-muted-foreground mt-1">Waiting for another participant to confirm.</p>
-            {error && <p className="text-sm text-destructive mt-2">{error}</p>}
           </CardContent>
         </Card>
       );
@@ -177,7 +233,6 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
               )}
             </Button>
           </div>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
         </CardContent>
       </Card>
     );

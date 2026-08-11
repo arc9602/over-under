@@ -30,11 +30,11 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
         <BetStatusBadge status={market.status} />
       </div>
 
-      <div className="flex items-baseline gap-2">
-        <span className="text-4xl font-black text-primary">
+      <div className="flex items-baseline gap-2 min-w-0">
+        <span className="text-4xl font-black text-primary tabular-nums shrink-0">
           {market.last_price != null ? formatCents(market.last_price) : "—"}
         </span>
-        <span className="text-muted-foreground text-sm">
+        <span className="text-muted-foreground text-sm truncate min-w-0">
           {market.last_price != null
             ? `last traded · ${market.yes_label}`
             : "not traded yet"}

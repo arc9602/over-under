@@ -54,7 +54,10 @@ export function MobileBottomNav() {
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+    <nav
+      className="sm:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       <div className="flex">
         {links.map((link) => {
           const active = pathname.startsWith(link.href);
