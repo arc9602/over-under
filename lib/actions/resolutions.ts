@@ -24,6 +24,24 @@ export async function proposeResolution(
     if (error) return { error: error.message };
   } else {
     const winnerSide = winnerOptionId === "a" ? "a" : "b";
+    const optionCountResult = await supabase
+      .from("bet_options")
+      .select("id", { count: "exact", head: true })
+      .eq("bet_id", betId);
+
+    if (
+      optionCountResult.error &&
+      !["PGRST205", "42P01"].includes(optionCountResult.error.code)
+    ) {
+      return { error: optionCountResult.error.message };
+    }
+    if ((optionCountResult.count ?? 0) > 2) {
+      return {
+        error:
+          "Multi-option resolutions are temporarily disabled; no changes were made",
+      };
+    }
+
     const { error: compatibilityError } = await supabase.rpc(
       "propose_legacy_resolution",
       {

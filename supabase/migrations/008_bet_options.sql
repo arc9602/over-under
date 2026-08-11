@@ -236,6 +236,34 @@ CREATE TRIGGER map_legacy_resolution_option
 REVOKE ALL ON FUNCTION public.map_legacy_participant_option() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.map_legacy_resolution_option() FROM PUBLIC;
 
+-- Legacy direct proposals must atomically move the bet into resolving.
+CREATE FUNCTION public.advance_legacy_resolution_bet()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.bets
+  SET status = 'resolving'
+  WHERE id = NEW.bet_id
+    AND status = 'locked';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Bet must be locked before proposing a resolution';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER advance_legacy_resolution_bet
+  AFTER INSERT ON public.resolutions
+  FOR EACH ROW
+  EXECUTE FUNCTION public.advance_legacy_resolution_bet();
+
+REVOKE ALL ON FUNCTION public.advance_legacy_resolution_bet() FROM PUBLIC;
+
 -- Resolution state transitions and payouts must only happen through RPCs.
 DROP POLICY IF EXISTS "Participants can update resolutions"
   ON public.resolutions;
@@ -257,6 +285,22 @@ SET status = 'superseded',
 FROM duplicate_pending duplicate
 WHERE r.id = duplicate.id
   AND duplicate.proposal_number > 1;
+
+-- Keep only pending proposals whose bets can legitimately resolve.
+UPDATE public.resolutions r
+SET status = 'superseded',
+    resolved_at = COALESCE(r.resolved_at, NOW())
+FROM public.bets b
+WHERE r.bet_id = b.id
+  AND r.status = 'pending'
+  AND b.status NOT IN ('locked', 'resolving');
+
+UPDATE public.bets b
+SET status = 'resolving'
+FROM public.resolutions r
+WHERE r.bet_id = b.id
+  AND r.status = 'pending'
+  AND b.status = 'locked';
 
 CREATE UNIQUE INDEX resolutions_one_pending_per_bet_idx
   ON public.resolutions (bet_id)

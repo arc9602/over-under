@@ -34,6 +34,7 @@ describe("multi-option expansion migration", () => {
     expect(migration).toContain(
       'DROP POLICY IF EXISTS "Participants can update resolutions"'
     );
+    expect(migration).toContain("advance_legacy_resolution_bet");
     expect(migration).toContain("resolutions_one_pending_per_bet_idx");
     expect(migration).toContain("FOR UPDATE;");
   });

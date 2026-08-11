@@ -174,18 +174,39 @@ export async function placeWager(
 
   if (!bet) return { error: "Bet not found" };
 
-  const { error } = multiOptionBetsEnabled()
-    ? await supabase.rpc("place_option_wager", {
+  let error;
+  if (multiOptionBetsEnabled()) {
+    ({ error } = await supabase.rpc("place_option_wager", {
         p_bet_id: bet.id,
         p_option_id: optionId,
         p_amount: amount,
-      })
-    : await serviceClient.rpc("place_wager", {
+      }));
+  } else {
+    const optionCountResult = await serviceClient
+      .from("bet_options")
+      .select("id", { count: "exact", head: true })
+      .eq("bet_id", bet.id);
+
+    if (
+      optionCountResult.error &&
+      !["PGRST205", "42P01"].includes(optionCountResult.error.code)
+    ) {
+      return { error: optionCountResult.error.message };
+    }
+    if ((optionCountResult.count ?? 0) > 2) {
+      return {
+        error:
+          "Multi-option betting is temporarily disabled; this wager was not changed",
+      };
+    }
+
+    ({ error } = await serviceClient.rpc("place_wager", {
         p_bet_id: bet.id,
         p_user_id: user.id,
         p_side: optionId === "a" ? "a" : "b",
         p_amount: amount,
-      });
+      }));
+  }
 
   if (error) return { error: error.message };
 

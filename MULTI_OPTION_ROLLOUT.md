@@ -9,15 +9,17 @@ the current two-option experience or querying tables that do not exist yet.
 
 ## Release sequence
 
-1. Deploy this branch with `MULTI_OPTION_BETS_ENABLED` unset.
-2. Have an authorized owner of Supabase project `gfdafravmyuwtdomespf` apply
+1. Have an authorized owner of Supabase project `gfdafravmyuwtdomespf` apply
    `supabase/migrations/008_bet_options.sql` as one transaction.
-3. Run the verification queries below.
+2. Run the verification queries below.
+3. Deploy this branch with `MULTI_OPTION_BETS_ENABLED` unset.
 4. Set `MULTI_OPTION_BETS_ENABLED=true` in the Cloudflare Worker runtime
    variables and deploy again.
 5. Smoke-test an existing bet and a new three-option bet.
 
-Do not enable the flag before migration 008 commits successfully.
+Do not deploy this branch or enable the flag before migration 008 commits
+successfully. Applying the additive migration first keeps the currently
+deployed two-option app working and closes the legacy RPC authorization gap.
 
 ## Migration verification
 
