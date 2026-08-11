@@ -515,6 +515,335 @@ export type Database = {
         };
         Relationships: [];
       };
+      wallet_links: {
+        Row: {
+          user_id: string;
+          // Always lowercased; the CHECK enforces ^0x[0-9a-f]{40}$ so the
+          // deposit/withdrawal equality checks can't be beaten by checksum casing.
+          address: string;
+          wallet_type: WalletType | null;
+          verified_at: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          address: string;
+          wallet_type?: WalletType | null;
+          verified_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          address?: string;
+          wallet_type?: WalletType | null;
+          verified_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "wallet_links_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      usdc_accounts: {
+        Row: {
+          user_id: string;
+          /**
+           * Every NUMERIC(20,6) USDC column in this file is typed `string`, not
+           * `number` — deliberately, and unlike what the Supabase CLI would
+           * generate. These are money at 6 on-chain decimals, and
+           * lib/chain/amount.ts is the only sanctioned way to handle them: it
+           * takes decimal strings and returns bigint. Typing them as `number`
+           * would let `balance * 2` or `a - b` compile cleanly and put IEEE-754
+           * floats in the middle of a custodied balance, which is the exact bug
+           * the whole design exists to prevent.
+           */
+          available: string;
+          escrow: string;
+          withdrawal_pending: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          available?: string;
+          escrow?: string;
+          withdrawal_pending?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          available?: string;
+          escrow?: string;
+          withdrawal_pending?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usdc_accounts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      usdc_transactions: {
+        Row: {
+          id: string;
+          kind: UsdcTransactionKind;
+          // At most one of bet_id / market_id is set — both NULL is legal here
+          // (deposits and withdrawals belong to neither).
+          bet_id: string | null;
+          market_id: string | null;
+          description: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          kind: UsdcTransactionKind;
+          bet_id?: string | null;
+          market_id?: string | null;
+          description?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          kind?: UsdcTransactionKind;
+          bet_id?: string | null;
+          market_id?: string | null;
+          description?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usdc_transactions_bet_id_fkey";
+            columns: ["bet_id"];
+            isOneToOne: false;
+            referencedRelation: "bets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usdc_transactions_market_id_fkey";
+            columns: ["market_id"];
+            isOneToOne: false;
+            referencedRelation: "markets";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      usdc_postings: {
+        Row: {
+          id: string;
+          transaction_id: string;
+          // NULL for exactly one bucket, 'external', which models the chain and
+          // belongs to no user (usdc_postings_external_has_no_user_chk).
+          user_id: string | null;
+          bucket: UsdcBucket;
+          // Signed: positive increased the bucket, negative decreased it. Never 0.
+          amount: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          transaction_id: string;
+          user_id?: string | null;
+          bucket: UsdcBucket;
+          amount: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          transaction_id?: string;
+          user_id?: string | null;
+          bucket?: UsdcBucket;
+          amount?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usdc_postings_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "usdc_transactions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usdc_postings_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      usdc_deposits: {
+        Row: {
+          id: string;
+          user_id: string;
+          transaction_hash: string;
+          from_address: string;
+          amount: string;
+          block_number: number | null;
+          transaction_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          transaction_hash: string;
+          from_address: string;
+          amount: string;
+          block_number?: number | null;
+          transaction_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          transaction_hash?: string;
+          from_address?: string;
+          amount?: string;
+          block_number?: number | null;
+          transaction_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usdc_deposits_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usdc_deposits_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "usdc_transactions";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      usdc_withdrawals: {
+        Row: {
+          id: string;
+          user_id: string;
+          // Snapshotted from wallet_links at begin time, never read from the
+          // request, so a mid-flight re-link cannot redirect the payout.
+          to_address: string;
+          amount: string;
+          status: UsdcWithdrawalStatus;
+          transaction_hash: string | null;
+          failure_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          to_address: string;
+          amount: string;
+          status?: UsdcWithdrawalStatus;
+          transaction_hash?: string | null;
+          failure_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          to_address?: string;
+          amount?: string;
+          status?: UsdcWithdrawalStatus;
+          transaction_hash?: string | null;
+          failure_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usdc_withdrawals_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      usdc_escrow_locks: {
+        Row: {
+          id: string;
+          user_id: string;
+          // Exactly one of market_id / bet_id is set. order_id is independent:
+          // it is set only when the lock came from a market order.
+          market_id: string | null;
+          order_id: string | null;
+          bet_id: string | null;
+          amount: string;
+          status: UsdcEscrowLockStatus;
+          created_at: string;
+          released_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          market_id?: string | null;
+          order_id?: string | null;
+          bet_id?: string | null;
+          amount: string;
+          status?: UsdcEscrowLockStatus;
+          created_at?: string;
+          released_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          market_id?: string | null;
+          order_id?: string | null;
+          bet_id?: string | null;
+          amount?: string;
+          status?: UsdcEscrowLockStatus;
+          created_at?: string;
+          released_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usdc_escrow_locks_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usdc_escrow_locks_market_id_fkey";
+            columns: ["market_id"];
+            isOneToOne: false;
+            referencedRelation: "markets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usdc_escrow_locks_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "market_orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usdc_escrow_locks_bet_id_fkey";
+            columns: ["bet_id"];
+            isOneToOne: false;
+            referencedRelation: "bets";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -620,6 +949,80 @@ export type Database = {
         };
         Returns: string;
       };
+      // The one primitive every USDC movement goes through. p_from_user_id and
+      // p_to_user_id are NULL exactly when the corresponding bucket is
+      // 'external' (the chain), which belongs to no user.
+      move_usdc: {
+        Args: {
+          p_kind: UsdcTransactionKind;
+          p_from_user_id: string | null;
+          p_from_bucket: UsdcBucket;
+          p_to_user_id: string | null;
+          p_to_bucket: UsdcBucket;
+          p_amount: string;
+          p_bet_id?: string | null;
+          p_market_id?: string | null;
+          p_description?: string | null;
+        };
+        // The usdc_transactions id.
+        Returns: string;
+      };
+      credit_usdc_deposit: {
+        Args: {
+          p_user_id: string;
+          p_transaction_hash: string;
+          p_from_address: string;
+          p_amount: string;
+          p_block_number?: number | null;
+        };
+        // The usdc_deposits id.
+        Returns: string;
+      };
+      lock_usdc_escrow: {
+        Args: {
+          p_user_id: string;
+          p_amount: string;
+          p_market_id?: string | null;
+          p_order_id?: string | null;
+          p_bet_id?: string | null;
+        };
+        // The usdc_escrow_locks id.
+        Returns: string;
+      };
+      release_usdc_escrow: {
+        Args: { p_lock_id: string };
+        Returns: undefined;
+      };
+      payout_usdc_escrow: {
+        Args: {
+          p_from_user_id: string;
+          p_to_user_id: string;
+          p_amount: string;
+          p_market_id?: string | null;
+          p_bet_id?: string | null;
+          p_description?: string | null;
+        };
+        // The usdc_transactions id.
+        Returns: string;
+      };
+      // RETURNS public.usdc_withdrawals, so the whole freshly-inserted row
+      // comes back — the caller needs its id and to_address to do the send.
+      begin_usdc_withdrawal: {
+        Args: { p_user_id: string; p_amount: string };
+        Returns: Database["public"]["Tables"]["usdc_withdrawals"]["Row"];
+      };
+      mark_usdc_withdrawal_sent: {
+        Args: { p_withdrawal_id: string; p_transaction_hash: string };
+        Returns: undefined;
+      };
+      finalize_usdc_withdrawal: {
+        Args: { p_withdrawal_id: string };
+        Returns: undefined;
+      };
+      revert_usdc_withdrawal: {
+        Args: { p_withdrawal_id: string; p_reason?: string | null };
+        Returns: undefined;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
@@ -653,3 +1056,42 @@ export type MarketStatus = BetStatus;
 export type MarketSide = "yes" | "no";
 
 export type MarketOrderStatus = "open" | "filled" | "cancelled";
+
+/** Which Privy wallet a `wallet_links` row describes. Display only. */
+export type WalletType = "embedded" | "external";
+
+/**
+ * The four buckets USDC can sit in. The first three belong to a user and are
+ * columns on `usdc_accounts`; `external` is the chain itself, belongs to
+ * nobody, and exists so every event — deposit, escrow lock, payout,
+ * withdrawal — is the same balanced two-sided transfer.
+ */
+export type UsdcBucket =
+  | "available"
+  | "escrow"
+  | "withdrawal_pending"
+  | "external";
+
+/** What a `usdc_transactions` row was for. */
+export type UsdcTransactionKind =
+  | "deposit"
+  | "escrow_lock"
+  | "escrow_release"
+  | "escrow_payout"
+  | "withdrawal_begin"
+  | "withdrawal_finalize"
+  | "withdrawal_revert";
+
+/**
+ * Withdrawals are three-phase because signing and broadcasting can't happen
+ * inside a database transaction: `pending` (funds moved to
+ * withdrawal_pending), `sent` (broadcast, hash recorded), then either
+ * `confirmed` (finalized to external) or `failed` (reverted to available).
+ */
+export type UsdcWithdrawalStatus = "pending" | "sent" | "confirmed" | "failed";
+
+/**
+ * `released` covers both endings — cancelled back to available, or paid out at
+ * settlement. `usdc_transactions.kind` is what distinguishes them.
+ */
+export type UsdcEscrowLockStatus = "open" | "released";

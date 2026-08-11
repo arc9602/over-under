@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserAvatarMenu } from "./UserAvatarMenu";
+import { WalletButton } from "@/components/wallet/WalletButton";
 import type { Profile } from "@/lib/types";
 
 interface AppNavProps {
@@ -47,6 +48,7 @@ export function AppNav({ profile }: AppNavProps) {
           </nav>
         </div>
         <div className="flex items-center gap-3">
+          <WalletButton />
           <Link
             href={newHref}
             className="hidden sm:flex items-center gap-1 bg-primary text-primary-foreground text-sm font-bold px-4 py-1.5 rounded hover:opacity-90 transition-opacity"

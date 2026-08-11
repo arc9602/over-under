@@ -6,6 +6,11 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Node's native TypeScript stripping (used by `node --test tests/*.test.ts`)
+    // does not resolve extensionless specifiers, so the tests import
+    // "../lib/chain/amount.ts" explicitly. Safe here only because noEmit is on
+    // above -- tsc never writes the unrewritten path into an output file.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
