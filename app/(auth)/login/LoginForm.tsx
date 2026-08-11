@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { safeRedirectPath } from "@/lib/utils/safeRedirect";
+import { LoginShell } from "./LoginShell";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -29,25 +30,18 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-black tracking-tight text-primary">OVER/UNDER</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Private bets with friends</p>
-        </div>
+    <LoginShell>
+      {error && (
+        <p className="text-sm text-destructive mb-4 text-center">{error}</p>
+      )}
 
-        {error && (
-          <p className="text-sm text-destructive mb-4 text-center">{error}</p>
-        )}
-
-        <Button
-          type="button"
-          className="w-full font-bold"
-          onClick={handleGoogleSignIn}
-        >
-          Continue with Google
-        </Button>
-      </div>
-    </div>
+      <Button
+        type="button"
+        className="w-full font-bold"
+        onClick={handleGoogleSignIn}
+      >
+        Continue with Google
+      </Button>
+    </LoginShell>
   );
 }

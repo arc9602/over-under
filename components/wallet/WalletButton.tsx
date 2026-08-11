@@ -17,7 +17,7 @@ import { useAccount, useReadContract } from "wagmi";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { polygonAmoy } from "viem/chains";
 import { toast } from "sonner";
-import { CopyIcon, WalletIcon } from "lucide-react";
+import { CopyIcon, LinkIcon, WalletIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -31,6 +31,7 @@ import { getUsdcAddress, isChainConfigured } from "@/lib/chain/env";
 import { usdcAbi } from "@/lib/chain/usdc";
 import { displayUsdc } from "@/lib/chain/amount";
 import { DepositModal } from "./DepositModal";
+import { useWalletLink } from "./useWalletLink";
 
 /** 0x1234abcd… -> 0x1234…abcd. Purely presentational. */
 export function truncateAddress(address: string): string {
@@ -58,6 +59,7 @@ function ConnectedWalletButton() {
   const { wallets } = useWallets();
   const { address, isConnected } = useAccount();
   const [depositOpen, setDepositOpen] = useState(false);
+  const { isLinked, isMismatched, linking, linkedAddress, link } = useWalletLink(address);
 
   const {
     data: balanceUnits,
@@ -121,6 +123,24 @@ function ConnectedWalletButton() {
     }
   }
 
+  async function handleLink() {
+    try {
+      await link();
+      toast.success("Wallet linked", {
+        description: "Deposits from this wallet will now be credited to your account.",
+      });
+    } catch (error) {
+      // A user declining the signature prompt is a normal outcome, not a
+      // failure worth an alarming toast.
+      const message = error instanceof Error ? error.message : "Could not link that wallet";
+      if (/reject|denied|cancell?ed/i.test(message)) {
+        toast.message("Linking cancelled");
+        return;
+      }
+      toast.error(message);
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -143,14 +163,39 @@ function ConnectedWalletButton() {
               {balanceError ? "Unavailable" : `$${balanceLabel}`}
             </p>
             <p className="text-xs text-muted-foreground">Polygon Amoy testnet</p>
+
+            {/* Link state is shown before the actions, not buried in an error
+                after the fact: an unlinked wallet cannot deposit or withdraw at
+                all, so a user needs to know that BEFORE they send funds. */}
+            {isMismatched ? (
+              <p className="mt-2 text-xs text-destructive">
+                Your account is linked to {truncateAddress(linkedAddress!)}. Switch to that
+                wallet to deposit.
+              </p>
+            ) : !isLinked ? (
+              <p className="mt-2 text-xs text-amber-400">Not linked yet — link to deposit.</p>
+            ) : null}
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopy} className="cursor-pointer">
             <CopyIcon className="size-3.5" />
             Copy address
           </DropdownMenuItem>
+
+          {!isLinked && !isMismatched && (
+            <DropdownMenuItem
+              onClick={handleLink}
+              disabled={linking}
+              className="cursor-pointer font-medium"
+            >
+              <LinkIcon className="size-3.5" />
+              {linking ? "Waiting for signature…" : "Link this wallet"}
+            </DropdownMenuItem>
+          )}
+
           <DropdownMenuItem
             onClick={() => setDepositOpen(true)}
+            disabled={!isLinked}
             className="cursor-pointer font-medium"
           >
             Deposit USDC
