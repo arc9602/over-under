@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the placeholder template, which holds no values. This negation
+# must come after the .env* line above -- git applies the last matching
+# pattern, so reversing these two lines silently un-tracks the template.
+!.env.example
 
 # vercel
 .vercel
