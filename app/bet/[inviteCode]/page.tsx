@@ -52,7 +52,10 @@ export default async function InviteLandingPage({ params }: Props) {
   }));
   const totalPool = optionSummaries.reduce((sum, o) => sum + o.total, 0);
 
-  const canJoin = bet.status === "open" || bet.status === "active";
+  const deadlinePassed =
+    bet.deadline !== null && new Date(bet.deadline).getTime() <= Date.now();
+  const canJoin =
+    !deadlinePassed && (bet.status === "open" || bet.status === "active");
 
   const limits = [
     bet.min_wager != null ? `min ${formatCurrency(bet.min_wager)}` : null,
@@ -137,7 +140,9 @@ export default async function InviteLandingPage({ params }: Props) {
         ) : (
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              {bet.status === "locked" || bet.status === "resolving"
+              {deadlinePassed
+                ? "This bet has expired and no longer accepts wagers."
+                : bet.status === "locked" || bet.status === "resolving"
                 ? "This bet is locked and no longer accepting wagers."
                 : `This bet is ${bet.status} and no longer accepting wagers.`}
             </p>

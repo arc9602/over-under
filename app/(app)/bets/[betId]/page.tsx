@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getBetById } from "@/lib/queries/bets";
 import { getNetIouForBet } from "@/lib/queries/balances";
+import { getFriendsForUser } from "@/lib/queries/friends";
+import { getSentBetInviteeIds } from "@/lib/queries/invites";
 import { BetDetail } from "@/components/bet/BetDetail";
 import { ResolutionPanel } from "@/components/bet/ResolutionPanel";
 import { InviteSharePanel } from "@/components/bet/InviteSharePanel";
@@ -36,9 +38,24 @@ export default async function BetDetailPage({ params }: Props) {
 
   const canCancel = isCreator && (bet.status === "open" || bet.status === "active");
   const canLock = isCreator && bet.status === "active";
-  const canWager = bet.status === "open" || bet.status === "active";
+  const deadlinePassed =
+    bet.deadline !== null && new Date(bet.deadline).getTime() <= Date.now();
+  const canWager =
+    !deadlinePassed && (bet.status === "open" || bet.status === "active");
 
-  const netIou = bet.status === "resolved" ? await getNetIouForBet(betId, user.id) : undefined;
+  const [netIou, friends, invitedFriendIds] = await Promise.all([
+    bet.status === "resolved"
+      ? getNetIouForBet(betId, user.id)
+      : Promise.resolve(undefined),
+    canWager ? getFriendsForUser(user.id) : Promise.resolve([]),
+    canWager ? getSentBetInviteeIds(betId, user.id) : Promise.resolve([]),
+  ]);
+  const participantIds = new Set(
+    bet.bet_participants.map((participant) => participant.user_id)
+  );
+  const eligibleFriends = friends.filter(
+    (friend) => !participantIds.has(friend.id)
+  );
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -47,8 +64,13 @@ export default async function BetDetailPage({ params }: Props) {
       <Separator />
 
       {/* Invite panel — still accepting wagers */}
-      {(bet.status === "open" || bet.status === "active") && (
-        <InviteSharePanel inviteCode={bet.invite_code} />
+      {canWager && (
+        <InviteSharePanel
+          inviteCode={bet.invite_code}
+          betId={bet.id}
+          friends={eligibleFriends}
+          invitedFriendIds={invitedFriendIds}
+        />
       )}
 
       {canWager && (() => {

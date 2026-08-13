@@ -15,6 +15,7 @@ export function AppNav({ profile }: AppNavProps) {
 
   const links = [
     { href: "/dashboard", label: "My Bets" },
+    { href: "/friends", label: "Friends" },
     { href: "/markets", label: "Markets" },
     { href: "/balances", label: "Portfolio" },
   ];
@@ -31,7 +32,7 @@ export function AppNav({ profile }: AppNavProps) {
           <Link href="/dashboard" className="text-xl font-black tracking-tight text-primary">
             OVER/UNDER
           </Link>
-          <nav className="hidden sm:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -51,7 +52,7 @@ export function AppNav({ profile }: AppNavProps) {
           <WalletWidget />
           <Link
             href={newHref}
-            className="hidden sm:flex items-center gap-1 bg-primary text-primary-foreground text-sm font-bold px-4 py-1.5 rounded hover:opacity-90 transition-opacity"
+            className="hidden lg:flex items-center gap-1 bg-primary text-primary-foreground text-sm font-bold px-4 py-1.5 rounded hover:opacity-90 transition-opacity"
           >
             {newLabel}
           </Link>

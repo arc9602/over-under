@@ -21,6 +21,16 @@ export function MobileBottomNav() {
       ),
     },
     {
+      href: "/friends",
+      label: "Friends",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H2v-2a4 4 0 014-4h3m8-4a3 3 0 100-6 3 3 0 000 6zM9 12a4 4 0 100-8 4 4 0 000 8zm6 8v-2a6 6 0 00-12 0v2" />
+        </svg>
+      ),
+    },
+    {
       href: "/markets",
       label: "Markets",
       icon: (
@@ -55,7 +65,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="sm:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50"
+      className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="flex">

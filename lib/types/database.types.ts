@@ -33,6 +33,143 @@ export type Database = {
         };
         Relationships: [];
       };
+      friend_requests: {
+        Row: {
+          id: string;
+          requester_id: string;
+          recipient_id: string;
+          status: FriendRequestStatus;
+          created_at: string;
+          responded_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          requester_id: string;
+          recipient_id: string;
+          status?: FriendRequestStatus;
+          created_at?: string;
+          responded_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          requester_id?: string;
+          recipient_id?: string;
+          status?: FriendRequestStatus;
+          created_at?: string;
+          responded_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "friend_requests_requester_id_fkey";
+            columns: ["requester_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "friend_requests_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      friendships: {
+        Row: {
+          user_low_id: string;
+          user_high_id: string;
+          request_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_low_id: string;
+          user_high_id: string;
+          request_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          user_low_id?: string;
+          user_high_id?: string;
+          request_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "friendships_user_low_id_fkey";
+            columns: ["user_low_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "friendships_user_high_id_fkey";
+            columns: ["user_high_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "friendships_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: true;
+            referencedRelation: "friend_requests";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      bet_invites: {
+        Row: {
+          id: string;
+          bet_id: string;
+          inviter_id: string;
+          invitee_id: string;
+          status: BetInviteStatus;
+          created_at: string;
+          opened_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          bet_id: string;
+          inviter_id: string;
+          invitee_id: string;
+          status?: BetInviteStatus;
+          created_at?: string;
+          opened_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          bet_id?: string;
+          inviter_id?: string;
+          invitee_id?: string;
+          status?: BetInviteStatus;
+          created_at?: string;
+          opened_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bet_invites_bet_id_fkey";
+            columns: ["bet_id"];
+            isOneToOne: false;
+            referencedRelation: "bets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bet_invites_inviter_id_fkey";
+            columns: ["inviter_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bet_invites_invitee_id_fkey";
+            columns: ["invitee_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       bets: {
         Row: {
           id: string;
@@ -847,6 +984,30 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      send_friend_request: {
+        Args: { p_recipient_id: string };
+        Returns: string;
+      };
+      respond_friend_request: {
+        Args: { p_request_id: string; p_accept: boolean };
+        Returns: undefined;
+      };
+      cancel_friend_request: {
+        Args: { p_request_id: string };
+        Returns: undefined;
+      };
+      remove_friend: {
+        Args: { p_friend_id: string };
+        Returns: undefined;
+      };
+      invite_friend_to_bet: {
+        Args: { p_bet_id: string; p_invitee_id: string };
+        Returns: string;
+      };
+      update_bet_invite: {
+        Args: { p_invite_id: string; p_action: "seen" | "declined" };
+        Returns: undefined;
+      };
       confirm_resolution: {
         Args: { p_resolution_id: string; p_confirmer_id: string };
         Returns: undefined;
@@ -1028,6 +1189,14 @@ export type Database = {
     CompositeTypes: { [_ in never]: never };
   };
 };
+
+export type FriendRequestStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "cancelled";
+
+export type BetInviteStatus = "pending" | "seen" | "declined";
 
 export type BetStatus =
   | "open"

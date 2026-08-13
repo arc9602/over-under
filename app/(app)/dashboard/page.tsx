@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getBetsForUser } from "@/lib/queries/bets";
+import { getBetInvitesForUser } from "@/lib/queries/invites";
 import { BetCard } from "@/components/bet/BetCard";
+import { BetInviteNotifications } from "@/components/bet/BetInviteNotifications";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,7 +28,10 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const bets = await getBetsForUser(user.id).catch(() => [] as BetWithParticipants[]);
+  const [bets, betInvites] = await Promise.all([
+    getBetsForUser(user.id).catch(() => [] as BetWithParticipants[]),
+    getBetInvitesForUser(user.id).catch(() => []),
+  ]);
 
   function filterBets(bets: BetWithParticipants[], statuses: BetStatus[] | "all") {
     if (statuses === "all") return bets;
@@ -52,6 +57,8 @@ export default async function DashboardPage() {
           + New Bet
         </Link>
       </div>
+
+      <BetInviteNotifications invites={betInvites} />
 
       {bets.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
