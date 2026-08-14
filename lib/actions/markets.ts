@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { uuidSchema, inviteCodeSchema, priceSchema, quantitySchema } from "@/lib/validation/common";
+import { ApiError } from "@/lib/api/session";
+import { placeOrderForUser } from "@/lib/money/placeOrder";
 
 const createMarketSchema = z
   .object({
@@ -14,6 +16,7 @@ const createMarketSchema = z
     noLabel: z.string().min(1).max(50).default("No"),
     maxContracts: z.coerce.number().int().positive().max(100000).optional(),
     deadline: z.string().optional(),
+    backing: z.enum(["iou", "usdc"]).default("iou"),
     openingSide: z.enum(["yes", "no"]).optional(),
     openingPrice: priceSchema.optional(),
     openingQuantity: quantitySchema.optional(),
@@ -41,6 +44,7 @@ export async function createMarket(formData: FormData) {
     noLabel: formData.get("noLabel"),
     maxContracts: formData.get("maxContracts") || undefined,
     deadline: formData.get("deadline") || undefined,
+    backing: formData.get("backing") || undefined,
     openingSide: formData.get("openingSide") || undefined,
     openingPrice: formData.get("openingPrice") || undefined,
     openingQuantity: formData.get("openingQuantity") || undefined,
@@ -51,7 +55,7 @@ export async function createMarket(formData: FormData) {
   }
 
   const {
-    title, description, yesLabel, noLabel, maxContracts, deadline,
+    title, description, yesLabel, noLabel, maxContracts, deadline, backing,
     openingSide, openingPrice, openingQuantity,
   } = parsed.data;
 
@@ -65,6 +69,7 @@ export async function createMarket(formData: FormData) {
       max_contracts: maxContracts ?? null,
       deadline: deadline ? new Date(deadline).toISOString() : null,
       creator_id: user.id,
+      backing,
     })
     .select("id")
     .single();
@@ -72,17 +77,19 @@ export async function createMarket(formData: FormData) {
   if (error) return { error: error.message };
 
   if (openingSide && openingPrice && openingQuantity) {
-    const serviceClient = await createServiceClient();
-    await serviceClient.rpc("place_market_order", {
-      p_market_id: market.id,
-      p_user_id: user.id,
-      p_side: openingSide,
-      p_limit_price: openingPrice,
-      p_quantity: openingQuantity,
-    });
-    // Non-fatal if this fails -- the market exists either way and the creator
-    // can post from its own page. Same call the "wager now" path in
-    // createBet makes.
+    try {
+      await placeOrderForUser({
+        userId: user.id,
+        marketId: market.id,
+        side: openingSide,
+        limitPrice: openingPrice,
+        quantity: openingQuantity,
+      });
+    } catch {
+      // Non-fatal if this fails -- the market exists either way and the creator
+      // can post from its own page. Same call the "wager now" path in
+      // createBet makes.
+    }
   }
 
   revalidatePath("/markets");
@@ -121,15 +128,25 @@ export async function placeMarketOrder(
 
   if (!market) return { error: "Market not found" };
 
-  const { data, error } = await serviceClient.rpc("place_market_order", {
-    p_market_id: market.id,
-    p_user_id: user.id,
-    p_side: parsedSide.data,
-    p_limit_price: parsedPrice.data,
-    p_quantity: parsedQuantity.data,
-  });
-
-  if (error) return { error: error.message };
+  let result;
+  try {
+    result = await placeOrderForUser({
+      userId: user.id,
+      marketId: market.id,
+      side: parsedSide.data,
+      limitPrice: parsedPrice.data,
+      quantity: parsedQuantity.data,
+    });
+  } catch (e) {
+    // ApiError carries a message meant for a user (see placeOrderForUser and
+    // the RAISEs it surfaces). Anything else is unexpected -- logged, and
+    // reported generically so internals never leak into a server action's
+    // return value the way apiError already keeps them out of a JSON
+    // response.
+    if (e instanceof ApiError) return { error: e.message };
+    console.error("[placeMarketOrder] unexpected failure", e);
+    return { error: "That order could not be placed" };
+  }
 
   revalidatePath("/markets");
   revalidatePath(`/markets/${market.id}`);
@@ -139,12 +156,11 @@ export async function placeMarketOrder(
   // app, stay put so the freshly rendered book is visible.
   if ("inviteCode" in identifier) redirect(`/markets/${market.id}`);
 
-  const result = Array.isArray(data) ? data[0] : undefined;
   return {
     success: true,
-    filled: result?.filled_qty ?? 0,
-    resting: result?.resting_qty ?? parsedQuantity.data,
-    avgPrice: result?.avg_price_cents ?? null,
+    filled: result.filled,
+    resting: result.resting,
+    avgPrice: result.avgPriceCents,
   };
 }
 

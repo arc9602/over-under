@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-import { ApiError, apiError, apiOk, requireAdminSession, serviceClient } from "@/lib/api/session";
+import {
+  ApiError,
+  apiError,
+  apiOk,
+  requireAdminSession,
+  requireSameOrigin,
+  serviceClient,
+} from "@/lib/api/session";
 import { formatUsdc, maxLossUnits, parseUsdcColumn, settlementPayoutUnits } from "@/lib/chain/amount";
 import type { MarketSide } from "@/lib/types/database.types";
 import { firstIssue, marketSideSchema, uuidSchema } from "@/lib/validation/common";
@@ -176,6 +183,8 @@ async function planSettlement(db: Db, marketId: string, outcome: MarketSide): Pr
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    requireSameOrigin(request);
+
     // Admin only. requireAdminSession throws 404 rather than 403 for non-admins
     // -- a 403 would confirm that admin settlement exists here.
     const { user } = await requireAdminSession();

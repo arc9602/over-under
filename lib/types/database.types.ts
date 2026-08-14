@@ -243,6 +243,7 @@ export type Database = {
           creator_id: string;
           created_at: string;
           resolved_at: string | null;
+          backing: string;
         };
         Insert: {
           id?: string;
@@ -259,6 +260,7 @@ export type Database = {
           creator_id: string;
           created_at?: string;
           resolved_at?: string | null;
+          backing?: string;
         };
         Update: {
           id?: string;
@@ -275,6 +277,7 @@ export type Database = {
           creator_id?: string;
           created_at?: string;
           resolved_at?: string | null;
+          backing?: string;
         };
         Relationships: [
           {
@@ -904,6 +907,7 @@ export type Database = {
           p_side: MarketSide;
           p_limit_price: number;
           p_quantity: number;
+          p_escrow_lock_id?: string;
         };
         // RETURNS TABLE, so PostgREST hands back an array of one row.
         Returns: {

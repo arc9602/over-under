@@ -2,7 +2,15 @@ import "server-only";
 
 import { verifyMessage } from "viem";
 
-import { ApiError, apiError, apiOk, requireSession, serviceClient } from "@/lib/api/session";
+import {
+  ApiError,
+  apiError,
+  apiOk,
+  enforceRateLimit,
+  requireSameOrigin,
+  requireSession,
+  serviceClient,
+} from "@/lib/api/session";
 import { isUniqueViolation, parseJsonBody } from "@/lib/api/request";
 import {
   WALLET_LINK_MAX_AGE_MS,
@@ -32,7 +40,9 @@ import {
  */
 export async function POST(request: Request) {
   try {
+    requireSameOrigin(request);
     const { user } = await requireSession();
+    await enforceRateLimit(user.id, "wallet_link", 10, 60);
     const { address, signature, message, walletType } = await parseJsonBody(
       request,
       linkWalletSchema

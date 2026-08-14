@@ -31,6 +31,7 @@ export function CreateMarketForm() {
   const [noLabel, setNoLabel] = useState("No");
   const [maxContracts, setMaxContracts] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [backing, setBacking] = useState<"iou" | "usdc">("iou");
   const [seedBook, setSeedBook] = useState(false);
   const [openingSide, setOpeningSide] = useState<"yes" | "no">("yes");
   const [openingPrice, setOpeningPrice] = useState(50);
@@ -48,6 +49,7 @@ export function CreateMarketForm() {
     formData.set("noLabel", noLabel.trim());
     if (maxContracts) formData.set("maxContracts", maxContracts);
     if (deadline) formData.set("deadline", deadline);
+    formData.set("backing", backing);
     if (seedBook) {
       formData.set("openingSide", openingSide);
       formData.set("openingPrice", String(openingPrice));
@@ -104,6 +106,48 @@ export function CreateMarketForm() {
               maxLength={500}
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <p className="text-sm font-medium">How is this market backed?</p>
+
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="backing"
+                value="iou"
+                checked={backing === "iou"}
+                onChange={() => setBacking("iou")}
+                className="accent-primary mt-0.5"
+              />
+              <span>
+                <span className="font-medium">IOU</span>
+                <span className="block text-xs text-muted-foreground">
+                  Track who owes what, no deposit needed.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="backing"
+                value="usdc"
+                checked={backing === "usdc"}
+                onChange={() => setBacking("usdc")}
+                className="accent-primary mt-0.5"
+              />
+              <span>
+                <span className="font-medium">USDC</span>
+                <span className="block text-xs text-muted-foreground">
+                  Every order is backed by real funds held in escrow.
+                </span>
+              </span>
+            </label>
+
+            <p className="text-xs text-muted-foreground">
+              This can&apos;t be changed once the market is created.
+            </p>
           </div>
         </div>
       )}
@@ -288,6 +332,10 @@ export function CreateMarketForm() {
             <div className="flex items-center justify-between gap-4 p-3">
               <dt className="text-muted-foreground">Max per side</dt>
               <dd className="font-medium">{maxContracts || "No limit"}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4 p-3">
+              <dt className="text-muted-foreground">Backing</dt>
+              <dd className="font-medium">{backing === "usdc" ? "USDC (escrowed)" : "IOU"}</dd>
             </div>
             <div className="flex items-center justify-between gap-4 p-3">
               <dt className="text-muted-foreground">Deadline</dt>

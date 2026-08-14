@@ -6,7 +6,9 @@ import {
   ApiError,
   apiError,
   apiOk,
+  enforceRateLimit,
   requireLinkedWallet,
+  requireSameOrigin,
   requireSession,
   serviceClient,
 } from "@/lib/api/session";
@@ -33,7 +35,14 @@ import { depositSchema } from "@/lib/validation/wallet";
  */
 export async function POST(request: Request) {
   try {
+    requireSameOrigin(request);
     const { user } = await requireSession();
+    // Each POST here triggers several unauthenticated upstream JSON-RPC calls
+    // against the chain RPC provider (getTransactionReceipt, getBlockNumber,
+    // below), so an unlimited endpoint turns one signed-in account into an
+    // amplification lever against this app's own RPC quota, independent of
+    // whether any deposit is ever actually credited.
+    await enforceRateLimit(user.id, "wallet_deposit", 20, 60);
     const { transactionHash, amount } = await parseJsonBody(request, depositSchema);
 
     // The address this user proved control of at /api/wallet/link. 400s if

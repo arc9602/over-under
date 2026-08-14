@@ -2,7 +2,15 @@ import "server-only";
 
 import type { Address, Hex } from "viem";
 
-import { ApiError, apiError, apiOk, requireSession, serviceClient } from "@/lib/api/session";
+import {
+  ApiError,
+  apiError,
+  apiOk,
+  enforceRateLimit,
+  requireSameOrigin,
+  requireSession,
+  serviceClient,
+} from "@/lib/api/session";
 import { parseJsonBody, translateMoneyError } from "@/lib/api/request";
 import { getPublicClient, getVaultWalletClient, polygonAmoy } from "@/lib/chain/client";
 import { getUsdcAddress } from "@/lib/chain/env";
@@ -34,7 +42,9 @@ import { withdrawSchema } from "@/lib/validation/wallet";
  */
 export async function POST(request: Request) {
   try {
+    requireSameOrigin(request);
     const { user } = await requireSession();
+    await enforceRateLimit(user.id, "wallet_withdraw", 5, 60);
     const { amount } = await parseJsonBody(request, withdrawSchema);
 
     const units = parseUsdc(amount);
