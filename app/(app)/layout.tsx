@@ -33,7 +33,7 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <AppNav profile={profile as Profile} />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 pb-20 sm:pb-6">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 pb-20 lg:pb-6">
         {children}
       </main>
       <MobileBottomNav />

@@ -6,6 +6,8 @@ export type {
   MarketStatus,
   MarketSide,
   MarketOrderStatus,
+  FriendRequestStatus,
+  BetInviteStatus,
 } from "./database.types";
 
 export type {
@@ -25,6 +27,19 @@ export type BetOption = Database["public"]["Tables"]["bet_options"]["Row"];
 export type Resolution = Database["public"]["Tables"]["resolutions"]["Row"];
 export type IouEntry = Database["public"]["Tables"]["iou_ledger"]["Row"];
 export type Settlement = Database["public"]["Tables"]["settlements"]["Row"];
+export type FriendRequest =
+  Database["public"]["Tables"]["friend_requests"]["Row"];
+export type Friendship = Database["public"]["Tables"]["friendships"]["Row"];
+export type BetInvite = Database["public"]["Tables"]["bet_invites"]["Row"];
+
+export type FriendRequestWithProfile = FriendRequest & {
+  profile: Profile;
+};
+
+export type BetInviteWithDetails = BetInvite & {
+  inviter: Profile;
+  bet: Pick<Bet, "id" | "title" | "invite_code" | "status" | "deadline">;
+};
 
 export type BetWithParticipants = Bet & {
   creator: Profile;
