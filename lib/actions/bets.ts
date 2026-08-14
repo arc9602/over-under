@@ -9,14 +9,16 @@ import {
   inviteCodeSchema,
   moneySchema,
   betSideSchema,
+  lineText,
+  blockText,
   firstIssue,
 } from "@/lib/validation/common";
 
 const createBetWithOptionsSchema = z.object({
-  title: z.string().min(3).max(200),
-  description: z.string().max(500).optional(),
+  title: lineText(3, 200),
+  description: blockText(500).optional(),
   optionLabels: z
-    .array(z.string().trim().min(1).max(50))
+    .array(lineText(1, 50))
     .min(2)
     .max(10)
     .refine((labels) => new Set(labels.map((l) => l.toLowerCase())).size === labels.length, {
@@ -29,10 +31,10 @@ const createBetWithOptionsSchema = z.object({
 
 const createBetSchema = z
   .object({
-    title: z.string().min(3).max(200),
-    description: z.string().max(500).optional(),
-    sideALabel: z.string().min(1).max(50).default("Yes"),
-    sideBLabel: z.string().min(1).max(50).default("No"),
+    title: lineText(3, 200),
+    description: blockText(500).optional(),
+    sideALabel: lineText(1, 50).default("Yes"),
+    sideBLabel: lineText(1, 50).default("No"),
     minWager: z.coerce.number().positive().max(100000).optional(),
     maxWager: z.coerce.number().positive().max(100000).optional(),
     deadline: z.string().optional(),

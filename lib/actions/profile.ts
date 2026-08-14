@@ -4,14 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { lineText } from "@/lib/validation/common";
 
 const updateProfileSchema = z.object({
+  // The username regex already excludes everything DECEPTIVE_CHARS covers, so
+  // this field needs nothing further. display_name is the one that did: it
+  // accepts arbitrary Unicode by design (real names are not ASCII), which is
+  // also what made it the place to hide a bidi override or a zero-width
+  // character and render as somebody else.
   username: z
     .string()
     .min(3)
     .max(20)
     .regex(/^[a-z0-9_]+$/, "Lowercase letters, numbers, and underscores only"),
-  displayName: z.string().min(1).max(50),
+  displayName: lineText(1, 50),
 });
 
 export async function updateProfile(formData: FormData) {
