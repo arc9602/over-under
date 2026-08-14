@@ -4,16 +4,23 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { uuidSchema, inviteCodeSchema, priceSchema, quantitySchema } from "@/lib/validation/common";
+import {
+  uuidSchema,
+  inviteCodeSchema,
+  priceSchema,
+  quantitySchema,
+  lineText,
+  blockText,
+} from "@/lib/validation/common";
 import { ApiError } from "@/lib/api/session";
 import { placeOrderForUser } from "@/lib/money/placeOrder";
 
 const createMarketSchema = z
   .object({
-    title: z.string().min(3).max(200),
-    description: z.string().max(500).optional(),
-    yesLabel: z.string().min(1).max(50).default("Yes"),
-    noLabel: z.string().min(1).max(50).default("No"),
+    title: lineText(3, 200),
+    description: blockText(500).optional(),
+    yesLabel: lineText(1, 50).default("Yes"),
+    noLabel: lineText(1, 50).default("No"),
     maxContracts: z.coerce.number().int().positive().max(100000).optional(),
     deadline: z.string().optional(),
     backing: z.enum(["iou", "usdc"]).default("iou"),
