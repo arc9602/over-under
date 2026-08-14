@@ -154,7 +154,8 @@ in the custodial sense are all wrong here. The USDC stack exists in the codebase
 shipped path — do not surface it.
 
 **Resolved since this brief was first written** (migration `016_market_backing.sql`, commit
-`bf3a0bd`): a market declares its backing at creation and cannot change it. `iou` markets settle
+`55c22f6`, already applied to production): a market declares its backing at creation and cannot
+change it. `iou` markets settle
 to the ledger with nothing held; `usdc` markets escrow every order's maximum loss before it can
 rest or fill, and the two can never mix inside one market.
 

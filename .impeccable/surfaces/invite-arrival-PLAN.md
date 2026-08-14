@@ -166,8 +166,10 @@ so "Sign up" is a false distinction that costs conversion.
 ### Backing — read this before you write a single line of market copy
 
 This was an open question when the brief was written. **It is now decided** by migration
-`supabase/migrations/016_market_backing.sql`, which landed in commit `bf3a0bd`. Read that
-migration's header comment before you start — it explains the exposure it closes.
+`supabase/migrations/016_market_backing.sql`, which landed in commit `55c22f6`. Read that
+migration's header comment before you start — it explains the exposure it closes. **This
+migration is already applied to the production database**, so `markets.backing` exists and is
+real; you are not building against a pending schema change.
 
 `markets.backing` is `'iou' | 'usdc'`, chosen once at creation and **immutable** thereafter:
 
