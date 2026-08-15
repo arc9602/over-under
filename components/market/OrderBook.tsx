@@ -23,18 +23,18 @@ function BookSide({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase truncate">
-          {label}
-        </p>
-        <p className="text-[10px] text-muted-foreground">bids</p>
-      </div>
+      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase truncate">
+        {label}
+      </p>
       {levels.length === 0 ? (
         <p className="text-xs text-muted-foreground py-1">No orders yet</p>
       ) : (
         <ul className="space-y-1">
           {levels.map((level) => (
-            <li key={level.price} className="flex items-center justify-between text-xs">
+            <li
+              key={level.price}
+              className="flex items-center justify-between font-mono text-xs tabular-nums"
+            >
               <span className={`font-bold ${accent}`}>{formatCents(level.price)}</span>
               <span className="text-muted-foreground">
                 {level.quantity} {level.quantity === 1 ? "contract" : "contracts"}
@@ -70,30 +70,38 @@ export function OrderBook({ orders, yesLabel, noLabel }: OrderBookProps) {
 
   return (
     <Card>
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="p-4 space-y-3">
+        {/* There is no separate ask side: buying YES means matching a
+            resting NO bid, so the cheapest YES available is 100c minus the
+            best NO bid. Said in plain language below too -- someone who has
+            used a conventional exchange will look for an ask side and should
+            be told why there isn't one, not left to infer it from a ladder
+            that only ever shows bids. */}
+        <p className="text-xs text-muted-foreground">
+          Both sides below are bids. Buying {yesLabel} means matching someone&apos;s resting{" "}
+          {noLabel} bid, so the two prices always add up to 100&cent;.
+        </p>
+
         <div className="grid grid-cols-2 gap-3">
-          {/* There is no separate ask side: buying YES means matching a
-              resting NO bid, so the cheapest YES available is 100c minus the
-              best NO bid. */}
           <div className="rounded bg-secondary p-2.5 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5 truncate">
               Buy {yesLabel}
             </p>
-            <p className="text-xl font-semibold text-win">
+            <p className="font-mono text-xl font-semibold text-win tabular-nums">
               {best.yes ? formatCents(best.yes.price) : "—"}
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {best.yes ? `${best.yes.quantity} available` : "no sellers"}
             </p>
           </div>
           <div className="rounded bg-secondary p-2.5 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5 truncate">
               Buy {noLabel}
             </p>
-            <p className="text-xl font-semibold text-loss">
+            <p className="font-mono text-xl font-semibold text-loss tabular-nums">
               {best.no ? formatCents(best.no.price) : "—"}
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {best.no ? `${best.no.quantity} available` : "no sellers"}
             </p>
           </div>

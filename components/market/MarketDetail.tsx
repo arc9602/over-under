@@ -18,6 +18,16 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
   const oddsHistory = getOddsHistory(market.market_fills);
   const positionHistory = getPositionHistory(market.market_fills, currentUserId);
 
+  // The invite page and the markets list already lead with this; the screen
+  // where an order actually gets placed is the one place it was missing, and
+  // it's the most decision-relevant fact available at that moment. Vocabulary
+  // matches components/market/CreateMarketForm.tsx lines ~112-150 verbatim.
+  const backingLabel = market.backing === "usdc" ? "USDC" : "IOU";
+  const backingBlurb =
+    market.backing === "usdc"
+      ? "Every order is backed by real funds held in escrow."
+      : "Track who owes what, no deposit needed.";
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -31,7 +41,7 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
       </div>
 
       <div className="flex items-baseline gap-2 min-w-0">
-        <span className="text-4xl font-semibold text-primary tabular-nums shrink-0">
+        <span className="text-4xl font-mono font-semibold text-primary tabular-nums shrink-0">
           {market.last_price != null ? formatCents(market.last_price) : "—"}
         </span>
         <span className="text-muted-foreground text-sm truncate min-w-0">
@@ -39,6 +49,13 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
             ? `last traded · ${market.yes_label}`
             : "not traded yet"}
         </span>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/40 px-2.5 py-2">
+        <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-widest text-primary">
+          {backingLabel}
+        </span>
+        <span className="text-xs text-muted-foreground">{backingBlurb}</span>
       </div>
 
       <MarketOddsChart
