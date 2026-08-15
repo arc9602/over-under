@@ -34,9 +34,13 @@ export function BalanceCard({ balance }: BalanceCardProps) {
               </Avatar>
               <div className="min-w-0">
                 <p className="font-bold text-sm truncate">{friendName}</p>
+                {/* "You owe" / "Owes you" carries the distinction in words
+                    before color ever does -- text-win/text-loss here, not
+                    text-destructive, since this is a debt between two
+                    people, not an error state. */}
                 <p
                   className={`text-xs font-medium tabular-nums ${
-                    youOwe ? "text-destructive" : "text-win"
+                    youOwe ? "text-loss" : "text-win"
                   }`}
                 >
                   {youOwe

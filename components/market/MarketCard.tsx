@@ -20,13 +20,23 @@ export function MarketCard({ market, currentUserId }: MarketCardProps) {
   const markPrice = market.last_price ?? 50;
   const favorsYes = markPrice >= 50;
   const valueCents = position.yes * markPrice + position.no * (CONTRACT_CENTS - markPrice);
+  // Whether the counterparty's money is actually there is the most
+  // decision-relevant fact about a market -- the invite page already leads
+  // with it (app/market/[inviteCode]/page.tsx), the list didn't. Vocabulary
+  // matches components/market/CreateMarketForm.tsx lines ~112-150 verbatim.
+  const backingLabel = market.backing === "usdc" ? "USDC" : "IOU";
 
   return (
     <Link href={`/markets/${market.id}`}>
       <Card className="hover:border-primary/40 transition-colors cursor-pointer">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
-            <BetStatusBadge status={market.status} />
+            <div className="flex items-center gap-1.5">
+              <BetStatusBadge status={market.status} />
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-semibold tracking-widest text-muted-foreground">
+                {backingLabel}
+              </span>
+            </div>
             {market.last_price != null && (
               <span
                 className={cn(
