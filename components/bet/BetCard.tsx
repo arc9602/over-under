@@ -76,7 +76,7 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
     <Link href={`/bets/${bet.id}`}>
       <Card
         className={cn(
-          "transition-colors cursor-pointer",
+          "transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-[var(--ease-out)] cursor-pointer active:scale-[0.99] motion-reduce:active:scale-100",
           // State reads through opacity and ring weight, not color alone,
           // so the distinction survives for colorblind users too.
           isTerminal && "opacity-70 hover:border-border",

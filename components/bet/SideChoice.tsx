@@ -51,7 +51,7 @@ export function SideChoice({ options, value, onChange, groupLabel, id }: SideCho
           <label
             key={option.id}
             className={cn(
-              "relative flex min-h-11 cursor-pointer flex-col justify-center gap-1 rounded-lg border-2 p-3 transition-colors",
+              "relative flex min-h-11 cursor-pointer flex-col justify-center gap-1 rounded-lg border-2 p-3 transition-[background-color,border-color,transform] duration-150 ease-[var(--ease-out)] active:scale-[0.97] motion-reduce:active:scale-100",
               selected
                 ? "border-primary bg-primary/10"
                 : "border-border bg-secondary/40 hover:bg-secondary/60"
