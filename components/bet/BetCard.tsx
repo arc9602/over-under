@@ -13,10 +13,11 @@ import {
   getOptionTotals,
   getOptionPariMutuelPreview,
 } from "@/lib/utils/betPool";
-import type { BetStatus, BetWithParticipants } from "@/lib/types";
+import { getBetOutcome } from "@/lib/utils/betOutcome";
+import type { BetStatus, BetWithDetails } from "@/lib/types";
 
 interface BetCardProps {
-  bet: BetWithParticipants;
+  bet: BetWithDetails;
   currentUserId: string;
 }
 
@@ -37,14 +38,26 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
     : optionTotals.reduce((sum, o) => sum + o.total, 0);
 
   const mine = bet.bet_participants.find((p) => p.user_id === currentUserId);
-  const preview = !mine
+  const isTerminal = TERMINAL_STATUSES.includes(bet.status);
+  const isResolving = bet.status === "resolving";
+
+  // "What if my side wins?" -- a live projection, only meaningful while the
+  // bet hasn't actually resolved. Asking it after resolution is the bug this
+  // card used to have: from this call's point of view the user's own side
+  // always "wins", so it's null once there's a real outcome to show instead.
+  const preview = !mine || isTerminal
     ? null
     : isTwoOption
     ? getPariMutuelPreview(bet.bet_participants, mine.side!, currentUserId)
     : getOptionPariMutuelPreview(bet.bet_participants, mine.option_id!, currentUserId);
 
-  const isTerminal = TERMINAL_STATUSES.includes(bet.status);
-  const isResolving = bet.status === "resolving";
+  // What actually happened, from the bet's confirmed resolution. Only ever
+  // non-"none" for a resolved bet with a confirmed row -- see getBetOutcome
+  // for why an unconfirmed resolution, a cancellation, an expiry, or a stuck
+  // bet all correctly fall out to no outcome claim.
+  const outcome = mine
+    ? getBetOutcome(bet.bet_participants, bet.resolutions, currentUserId, isTwoOption)
+    : ({ kind: "none" } as const);
 
   // Which way the money is currently leaning -- a live signal, not a fixed
   // per-bet label, since option names are arbitrary and user-chosen.
@@ -102,30 +115,51 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-xs text-muted-foreground">Stake</p>
-                <p
-                  className={cn(
-                    "font-bold tabular-nums",
-                    // A settled bet's stake is context, not the headline
-                    // figure it is while the bet is still live.
-                    isTerminal ? "text-sm text-muted-foreground" : "text-base"
-                  )}
-                >
-                  {formatCurrency(preview.wager)}
-                </p>
+                <p className="font-bold text-base tabular-nums">{formatCurrency(preview.wager)}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Potential win</p>
                 <p
                   className={cn(
-                    "font-bold tabular-nums",
-                    isTerminal
-                      ? "text-sm text-muted-foreground"
-                      : cn("text-base", isTwoOption ? (mine.side === "a" ? "text-win" : "text-loss") : "text-primary")
+                    "font-bold text-base tabular-nums",
+                    isTwoOption ? (mine.side === "a" ? "text-win" : "text-loss") : "text-primary"
                   )}
                 >
                   {formatCurrency(preview.payout)}
                 </p>
               </div>
+            </div>
+          ) : mine && outcome.kind !== "none" ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Stake</p>
+                <p className="font-semibold text-sm text-muted-foreground tabular-nums">
+                  {formatCurrency(mine.amount)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">{outcome.kind === "won" ? "Won" : "Lost"}</p>
+                <p
+                  className={cn(
+                    "font-semibold text-sm tabular-nums",
+                    outcome.kind === "won" ? "text-win" : "text-loss"
+                  )}
+                >
+                  {formatCurrency(outcome.amount)}
+                </p>
+              </div>
+            </div>
+          ) : mine ? (
+            // Terminal with no confirmed outcome to report: resolved but
+            // unconfirmed, cancelled, expired, or stuck. Deliberately neutral
+            // -- cancelBet (lib/actions/bets.ts) only flips bets.status; it
+            // never touches bet_participants or any escrow/ledger row, so
+            // there is nothing here to honestly call "returned."
+            <div>
+              <p className="text-xs text-muted-foreground">Stake</p>
+              <p className="font-semibold text-sm text-muted-foreground tabular-nums">
+                {formatCurrency(mine.amount)}
+              </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground tabular-nums">

@@ -315,6 +315,14 @@ writing reassuring copy that may be false.
 Keep `tabular-nums` on every figure. Use `text-win` / `text-loss` for outcomes — those utilities
 work now. Never carry the win/loss distinction by color alone.
 
+## Also in scope: one stray hardcoded color
+
+`components/bet/CountdownTimer.tsx:29` is `<span className="text-xs text-amber-400">`. It fell
+through the gap between Section A's file list and Section B's, and it renders inside both the card
+and the new row. Change it to `text-resolving`, which is the token that colour was standing in
+for. That file and `BetCard.tsx` are the only two you may touch beyond the query and type changes
+authorized above.
+
 ## Verify
 
 ```bash

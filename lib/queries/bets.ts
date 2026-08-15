@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BetWithDetails, BetWithParticipants } from "@/lib/types";
 
-export async function getBetsForUser(userId: string): Promise<BetWithParticipants[]> {
+export async function getBetsForUser(userId: string): Promise<BetWithDetails[]> {
   const supabase = await createClient();
 
   // PostgREST can't parse a filter on an embedded (bet_participants) column
@@ -34,14 +34,15 @@ export async function getBetsForUser(userId: string): Promise<BetWithParticipant
         *,
         profiles (*)
       ),
-      bet_options (*)
+      bet_options (*),
+      resolutions (*)
     `)
     .in("id", betIds)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
 
-  const bets = (data ?? []) as BetWithParticipants[];
+  const bets = (data ?? []) as BetWithDetails[];
 
   // Check-on-read expiry
   const now = new Date();

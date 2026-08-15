@@ -26,5 +26,5 @@ export function CountdownTimer({ deadline }: { deadline: string }) {
   }, [deadline]);
 
   if (!label) return <span className="text-xs text-muted-foreground">Expired</span>;
-  return <span className="text-xs text-amber-400">{label}</span>;
+  return <span className="text-xs text-resolving">{label}</span>;
 }

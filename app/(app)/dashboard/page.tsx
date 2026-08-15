@@ -13,7 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getBetOptions, getSideTotals, getOptionTotals } from "@/lib/utils/betPool";
-import type { BetStatus, BetWithParticipants } from "@/lib/types";
+import type { BetStatus, BetWithDetails } from "@/lib/types";
 
 const LIVE_STATUSES: BetStatus[] = ["open", "active", "locked", "resolving"];
 
@@ -54,7 +54,7 @@ const EMPTY_STATE_COPY: Record<string, { title: string; description: string }> =
 // Array.prototype.sort is a stable sort (guaranteed since ES2019), and
 // getBetsForUser already returns bets newest-first, so ties within a rank
 // keep that recency order for free -- no secondary key needed here.
-function rankBet(bet: BetWithParticipants, userId: string): number {
+function rankBet(bet: BetWithDetails, userId: string): number {
   if (bet.status === "resolving") return 0;
   const isTerminal = TERMINAL_STATUSES.includes(bet.status);
   if (isTerminal) return 3;
@@ -62,14 +62,14 @@ function rankBet(bet: BetWithParticipants, userId: string): number {
   return hasStake ? 1 : 2;
 }
 
-function sortBets(bets: BetWithParticipants[], userId: string) {
+function sortBets(bets: BetWithDetails[], userId: string) {
   return [...bets].sort((a, b) => rankBet(a, userId) - rankBet(b, userId));
 }
 
 // The dense row a bet collapses into at md and up. Carries the same fields
 // as BetCard -- title, the user's side, stake, pool, deadline, status -- just
 // laid out for scanning ten-plus at once instead of reading one at a time.
-function BetRow({ bet, currentUserId }: { bet: BetWithParticipants; currentUserId: string }) {
+function BetRow({ bet, currentUserId }: { bet: BetWithDetails; currentUserId: string }) {
   const options = getBetOptions(bet);
   const isTwoOption = options.length === 2;
   const sideA = getSideTotals(bet.bet_participants, "a");
@@ -135,11 +135,11 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   const [bets, betInvites] = await Promise.all([
-    getBetsForUser(user.id).catch(() => [] as BetWithParticipants[]),
+    getBetsForUser(user.id).catch(() => [] as BetWithDetails[]),
     getBetInvitesForUser(user.id).catch(() => []),
   ]);
 
-  function filterBets(bets: BetWithParticipants[], statuses: BetStatus[] | "all") {
+  function filterBets(bets: BetWithDetails[], statuses: BetStatus[] | "all") {
     if (statuses === "all") return bets;
     return bets.filter((b) => statuses.includes(b.status));
   }
