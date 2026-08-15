@@ -114,14 +114,29 @@ export type UserPoolHistory = {
  * subsequent participant event from their entry onward. See getPoolHistory's
  * note on the one-row-per-user limitation: `wager` is fixed across all
  * points (we only know its final value, not a history of top-ups).
+ *
+ * `winnerSide` is optional and, absent, means the bet is still live: there's
+ * no winner yet, so "if my side wins, this is where I stand" is the right
+ * question and every point projects a win, exactly as before this parameter
+ * existed. Once a real side is passed, that question only stays valid for
+ * the side that actually won -- same computation, unchanged. For the losing
+ * side, the projection collapses to the real outcome at every point: a
+ * payout of 0 and a pnl of `-wager`, the stake that's gone. `currentOdds` and
+ * `referenceOdds` are untouched either way -- they describe how the pool
+ * split over time, not a claim about who won it.
  */
-export function getUserPoolHistory(participants: Participant[], userId: string): UserPoolHistory {
+export function getUserPoolHistory(
+  participants: Participant[],
+  userId: string,
+  winnerSide?: "a" | "b" | null
+): UserPoolHistory {
   const sorted = [...participants].sort((a, b) => a.joined_at.localeCompare(b.joined_at));
   const mine = sorted.find((p) => p.user_id === userId);
   if (!mine) return { points: [], side: null, referenceOdds: null };
 
   const wager = mine.amount;
   const side = mine.side;
+  const isSettledLoss = winnerSide != null && side !== winnerSide;
 
   let aTotal = 0;
   let bTotal = 0;
@@ -145,7 +160,7 @@ export function getUserPoolHistory(participants: Participant[], userId: string):
     if (p.joined_at < mine.joined_at) continue;
 
     const profit = mySideTotal > 0 ? (wager / mySideTotal) * otherTotal : 0;
-    const projectedPayout = wager + profit;
+    const projectedPayout = isSettledLoss ? 0 : wager + profit;
 
     points.push({
       timestamp: new Date(p.joined_at).getTime(),

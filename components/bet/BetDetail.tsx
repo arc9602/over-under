@@ -16,7 +16,7 @@ import {
   getBetOptions,
   getOptionTotals,
 } from "@/lib/utils/betPool";
-import { getBetOutcome, type BetOutcome } from "@/lib/utils/betOutcome";
+import { getBetOutcome, getConfirmedResolution, type BetOutcome } from "@/lib/utils/betOutcome";
 import type { BetStatus, BetWithDetails } from "@/lib/types";
 
 interface BetDetailProps {
@@ -271,8 +271,13 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
   const sideA = isTwoOption ? getSideTotals(bet.bet_participants, "a") : null;
   const sideB = isTwoOption ? getSideTotals(bet.bet_participants, "b") : null;
   const poolHistory = isTwoOption ? getPoolHistory(bet.bet_participants) : null;
+  // Only a confirmed resolution names a real winner -- pending/disputed/
+  // superseded rows decide nothing (see getConfirmedResolution). Passing
+  // this through makes getUserPoolHistory chart the actual outcome once
+  // there is one, instead of always projecting the viewer's own side to win.
+  const confirmedWinnerSide = getConfirmedResolution(bet.resolutions)?.proposed_winner_side ?? null;
   const userPoolHistory = isTwoOption
-    ? getUserPoolHistory(bet.bet_participants, currentUserId)
+    ? getUserPoolHistory(bet.bet_participants, currentUserId, confirmedWinnerSide)
     : null;
 
   const mine = bet.bet_participants.find((p) => p.user_id === currentUserId);
@@ -300,19 +305,15 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
     ? getBetOutcome(bet.bet_participants, bet.resolutions, currentUserId, isTwoOption)
     : ({ kind: "none" } as const);
 
-  // BetWagerChart's "Net" line is a historical "if my side wins" projection
-  // (lib/utils/betPool.ts#getUserPoolHistory always projects against the
-  // viewer's own side, not the actual winner) -- exactly the shape of claim
-  // that was wrong on BetCard before c2b7896. Once the bet is terminal, only
-  // show it when that projection happens to match the CONFIRMED result;
-  // otherwise it would draw a rising "profit" line for a bet the user lost,
-  // or one that never named a winner at all.
+  // BetWagerChart's "Net" line now carries the CONFIRMED outcome once one
+  // exists (userPoolHistory is built from confirmedWinnerSide above), so a
+  // settled loss draws its real flat-to-negative line instead of needing to
+  // be hidden -- the workaround this used to require is gone.
   const showWagerChart =
     isTwoOption &&
     !canStillWager &&
     userPoolHistory !== null &&
-    userPoolHistory.points.length > 0 &&
-    (!isTerminal || outcome.kind === "won");
+    userPoolHistory.points.length > 0;
 
   return (
     <div className={cn("space-y-5", isTerminal && "opacity-70")}>
