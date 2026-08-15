@@ -37,6 +37,13 @@ jobs:
 
       - run: npm ci
 
+      # Runs before anything expensive. CI deploys code but never applies SQL,
+      # so this is the only thing standing between "pushed a migration" and
+      # "shipped a route calling a function nobody created". No dependencies,
+      # so it is also the fastest possible way to fail.
+      - name: Migrations recorded as applied
+        run: node scripts/check-migrations.mjs
+
       - name: Typecheck
         run: npx tsc --noEmit
 
