@@ -37,7 +37,7 @@ export default async function BalancesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black">Portfolio</h1>
+        <h1 className="text-2xl font-bold">Portfolio</h1>
         <p className="text-muted-foreground text-sm mt-0.5">
           Track your balances and performance.
         </p>
@@ -52,7 +52,7 @@ export default async function BalancesPage() {
                   Lifetime Net
                 </p>
                 <p
-                  className={`text-3xl font-black tabular-nums ${
+                  className={`text-3xl font-semibold tabular-nums ${
                     up ? "text-win" : "text-loss"
                   }`}
                 >
@@ -83,7 +83,7 @@ export default async function BalancesPage() {
                 Outstanding
               </p>
               <p
-                className={`text-sm font-black tabular-nums ${
+                className={`text-sm font-semibold tabular-nums ${
                   outstandingNet >= 0 ? "text-win" : "text-loss"
                 }`}
               >
@@ -97,7 +97,7 @@ export default async function BalancesPage() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Owed to you
                 </p>
-                <p className="text-xl font-black tabular-nums text-win">
+                <p className="text-xl font-semibold tabular-nums text-win">
                   {formatCurrency(totalOwed)}
                 </p>
               </div>
@@ -105,7 +105,7 @@ export default async function BalancesPage() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   You owe
                 </p>
-                <p className="text-xl font-black tabular-nums text-loss">
+                <p className="text-xl font-semibold tabular-nums text-loss">
                   {formatCurrency(totalOwing)}
                 </p>
               </div>
@@ -123,7 +123,7 @@ export default async function BalancesPage() {
         />
       ) : (
         <div className="space-y-3">
-          <p className="text-xs font-black tracking-widest text-muted-foreground uppercase">
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
             Open Positions
           </p>
           {balances.map((balance) => (

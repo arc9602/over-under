@@ -82,7 +82,7 @@ export function FriendsPageClient({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black">Friends</h1>
+        <h1 className="text-2xl font-bold">Friends</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Add people by username, then invite them directly to your bets.
         </p>

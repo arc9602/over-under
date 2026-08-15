@@ -119,7 +119,7 @@ export function OptionWagerForm({
         <div className="rounded-lg bg-secondary/50 p-3 space-y-1">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Predicted payout if {activeOption.label} wins</span>
-            <span className="font-black tabular-nums">{formatCurrency(preview.payout)}</span>
+            <span className="font-bold tabular-nums">{formatCurrency(preview.payout)}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Profit</span>
@@ -140,7 +140,7 @@ export function OptionWagerForm({
         </div>
       )}
 
-      <Button type="submit" className="w-full font-black text-base py-6" disabled={isPending}>
+      <Button type="submit" className="w-full font-semibold text-base py-6" disabled={isPending}>
         {isPending ? "Placing wager…" : existingOptionId ? "Add to Wager" : "Place Wager"}
       </Button>
     </form>

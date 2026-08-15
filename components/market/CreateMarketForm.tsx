@@ -73,7 +73,7 @@ export function CreateMarketForm() {
       {step === 0 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">What&apos;s the question?</h2>
+            <h2 className="text-xl font-bold">What&apos;s the question?</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               Define the event clearly to avoid disputes later.
             </p>
@@ -155,7 +155,7 @@ export function CreateMarketForm() {
       {step === 1 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">What are the outcomes?</h2>
+            <h2 className="text-xl font-bold">What are the outcomes?</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               Name both sides. Traders buy one or the other.
             </p>
@@ -205,7 +205,7 @@ export function CreateMarketForm() {
       {step === 2 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">When does it settle?</h2>
+            <h2 className="text-xl font-bold">When does it settle?</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               Optionally set a deadline and post the first order.
             </p>
@@ -261,7 +261,7 @@ export function CreateMarketForm() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="openingPrice">Your price</Label>
-                    <span className="text-sm font-black text-primary tabular-nums">
+                    <span className="text-sm font-semibold text-primary tabular-nums">
                       {formatCents(openingPrice)}
                     </span>
                   </div>
@@ -304,7 +304,7 @@ export function CreateMarketForm() {
       {step === 3 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">Ready to open?</h2>
+            <h2 className="text-xl font-bold">Ready to open?</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               You&apos;ll get a private invite link to share.
             </p>
@@ -381,7 +381,7 @@ export function CreateMarketForm() {
             type="button"
             onClick={handleSubmit}
             disabled={isPending || !titleValid || !labelsValid}
-            className="font-black ml-auto"
+            className="font-semibold ml-auto"
           >
             {isPending ? "Creating…" : "Create Market & Get Link"}
           </Button>

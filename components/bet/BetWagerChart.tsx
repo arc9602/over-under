@@ -52,13 +52,13 @@ export function BetWagerChart({
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black tracking-widest text-muted-foreground uppercase truncate">
+            <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase truncate">
               {sideLabel ? `Net · ${sideLabel}` : "Net"}
             </p>
             {shown ? (
               <span
                 className={cn(
-                  "text-3xl font-black tabular-nums",
+                  "text-3xl font-semibold tabular-nums",
                   shown.pnl >= 0 ? "text-win" : "text-loss"
                 )}
               >
@@ -66,7 +66,7 @@ export function BetWagerChart({
                 {formatCurrency(Math.abs(shown.pnl))}
               </span>
             ) : (
-              <span className="text-3xl font-black text-muted-foreground">—</span>
+              <span className="text-3xl font-semibold text-muted-foreground">—</span>
             )}
             <p className="text-xs text-muted-foreground">
               {shown

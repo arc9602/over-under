@@ -24,7 +24,7 @@ function BookSide({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-black tracking-widest text-muted-foreground uppercase truncate">
+        <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase truncate">
           {label}
         </p>
         <p className="text-[10px] text-muted-foreground">bids</p>
@@ -79,7 +79,7 @@ export function OrderBook({ orders, yesLabel, noLabel }: OrderBookProps) {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
               Buy {yesLabel}
             </p>
-            <p className="text-xl font-black text-win">
+            <p className="text-xl font-semibold text-win">
               {best.yes ? formatCents(best.yes.price) : "—"}
             </p>
             <p className="text-[10px] text-muted-foreground">
@@ -90,7 +90,7 @@ export function OrderBook({ orders, yesLabel, noLabel }: OrderBookProps) {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
               Buy {noLabel}
             </p>
-            <p className="text-xl font-black text-loss">
+            <p className="text-xl font-semibold text-loss">
               {best.no ? formatCents(best.no.price) : "—"}
             </p>
             <p className="text-[10px] text-muted-foreground">

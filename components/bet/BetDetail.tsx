@@ -37,7 +37,7 @@ function SideList({
       <CardContent className="p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <p className="font-bold text-sm truncate min-w-0">{label}</p>
-          <p className="text-sm font-black text-primary tabular-nums shrink-0">
+          <p className="text-sm font-semibold text-primary tabular-nums shrink-0">
             {formatCurrency(total)}
           </p>
         </div>
@@ -94,7 +94,7 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black leading-tight">{bet.title}</h1>
+          <h1 className="text-2xl font-bold leading-tight">{bet.title}</h1>
           {bet.description && (
             <p className="text-muted-foreground text-sm mt-1">{bet.description}</p>
           )}
@@ -104,7 +104,7 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
 
       {/* Pool */}
       <div className="flex items-center gap-2">
-        <span className="text-3xl font-black text-primary">{formatCurrency(totalPool)}</span>
+        <span className="text-3xl font-semibold text-primary">{formatCurrency(totalPool)}</span>
         <span className="text-muted-foreground text-sm">in the pool</span>
       </div>
 

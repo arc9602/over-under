@@ -22,7 +22,7 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black leading-tight">{market.title}</h1>
+          <h1 className="text-2xl font-bold leading-tight">{market.title}</h1>
           {market.description && (
             <p className="text-muted-foreground text-sm mt-1">{market.description}</p>
           )}
@@ -31,7 +31,7 @@ export function MarketDetail({ market, currentUserId }: MarketDetailProps) {
       </div>
 
       <div className="flex items-baseline gap-2 min-w-0">
-        <span className="text-4xl font-black text-primary tabular-nums shrink-0">
+        <span className="text-4xl font-semibold text-primary tabular-nums shrink-0">
           {market.last_price != null ? formatCents(market.last_price) : "—"}
         </span>
         <span className="text-muted-foreground text-sm truncate min-w-0">

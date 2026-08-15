@@ -61,14 +61,14 @@ export function BetPositionChart({
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black tracking-widest text-muted-foreground uppercase truncate">
+            <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase truncate">
               {sideLabel ? `Holding ${sideLabel}` : "Position"}
             </p>
             {shown ? (
               <div className="flex items-baseline gap-2">
                 <span
                   className={cn(
-                    "text-3xl font-black tabular-nums",
+                    "text-3xl font-semibold tabular-nums",
                     shown.pnl >= 0 ? "text-win" : "text-loss"
                   )}
                 >
@@ -86,7 +86,7 @@ export function BetPositionChart({
                 </span>
               </div>
             ) : (
-              <span className="text-3xl font-black text-muted-foreground">—</span>
+              <span className="text-3xl font-semibold text-muted-foreground">—</span>
             )}
             <p className="text-xs text-muted-foreground">
               {shown ? `${formatCurrency(shown.positionValue)} value` : "No position"}

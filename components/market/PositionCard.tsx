@@ -22,7 +22,7 @@ function OutcomeRow({ label, profitCents }: { label: string; profitCents: number
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground truncate">If {label}</span>
       <span
-        className={`font-black tabular-nums ${
+        className={`font-semibold tabular-nums ${
           flat ? "text-muted-foreground" : up ? "text-win" : "text-destructive"
         }`}
       >
@@ -49,7 +49,7 @@ export function PositionCard({ fills, currentUserId, yesLabel, noLabel }: Positi
     <Card className="border-primary/40 bg-primary/5">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-black tracking-widest text-primary">YOUR POSITION</p>
+          <p className="text-xs font-semibold tracking-widest text-primary">YOUR POSITION</p>
           <p className="text-xs text-muted-foreground">
             {formatCurrency(centsToDollars(position.costCents))} at risk
           </p>
@@ -60,7 +60,7 @@ export function PositionCard({ fills, currentUserId, yesLabel, noLabel }: Positi
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">
               {yesLabel}
             </p>
-            <p className="font-black text-win">{position.yes}</p>
+            <p className="font-semibold text-win">{position.yes}</p>
             <p className="text-[10px] text-muted-foreground">
               {position.avgYesPrice != null ? `avg ${formatCents(position.avgYesPrice)}` : "—"}
             </p>
@@ -69,7 +69,7 @@ export function PositionCard({ fills, currentUserId, yesLabel, noLabel }: Positi
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">
               {noLabel}
             </p>
-            <p className="font-black text-loss">{position.no}</p>
+            <p className="font-semibold text-loss">{position.no}</p>
             <p className="text-[10px] text-muted-foreground">
               {position.avgNoPrice != null ? `avg ${formatCents(position.avgNoPrice)}` : "—"}
             </p>

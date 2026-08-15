@@ -193,7 +193,7 @@ export function BetInviteWager({
           </p>
           <div className="flex items-center justify-between">
             <span className="font-bold">{selectedOption.label}</span>
-            <span className="font-black tabular-nums">{formatCurrency(parsedAmount)}</span>
+            <span className="font-bold tabular-nums">{formatCurrency(parsedAmount)}</span>
           </div>
           {preview && (
             <div className="space-y-0.5">
@@ -214,7 +214,7 @@ export function BetInviteWager({
           </Button>
           <Button
             type="button"
-            className="flex-[2] font-black"
+            className="flex-[2] font-semibold"
             disabled={isPending}
             onClick={handleConfirmRestored}
           >
@@ -261,7 +261,7 @@ export function BetInviteWager({
               <div className="space-y-1 rounded-lg bg-secondary/50 p-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Projected return if {selectedOption.label} wins</span>
-                  <span className="font-black tabular-nums">{formatCurrency(preview.payout)}</span>
+                  <span className="font-bold tabular-nums">{formatCurrency(preview.payout)}</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground">Moves as others join.</p>
               </div>
@@ -271,7 +271,7 @@ export function BetInviteWager({
 
             <Button
               type="button"
-              className="w-full py-6 text-base font-black"
+              className="w-full py-6 text-base font-semibold"
               disabled={!isValidAmount || isPending}
               onClick={handleCommit}
             >

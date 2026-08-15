@@ -113,7 +113,7 @@ export function CreateBetForm() {
       {step === 0 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">What&apos;s the bet?</h2>
+            <h2 className="text-xl font-bold">What&apos;s the bet?</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               Define the event clearly to avoid disputes later.
             </p>
@@ -153,7 +153,7 @@ export function CreateBetForm() {
       {step === 1 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">What are the sides?</h2>
+            <h2 className="text-xl font-bold">What are the sides?</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               Name two or more options. Everyone picks one and stakes into the pool.
             </p>
@@ -209,7 +209,7 @@ export function CreateBetForm() {
       {step === 2 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">Set the rules</h2>
+            <h2 className="text-xl font-bold">Set the rules</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               {isTwoOption
                 ? "Optionally cap the stakes, set a deadline, and wager now."
@@ -347,7 +347,7 @@ export function CreateBetForm() {
       {step === 3 && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-xl font-black">Ready to open?</h2>
+            <h2 className="text-xl font-bold">Ready to open?</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               You&apos;ll get a private invite link to share.
             </p>
@@ -437,7 +437,7 @@ export function CreateBetForm() {
             type="button"
             onClick={handleSubmit}
             disabled={isPending || !titleValid || !labelsValid || !wagerValid}
-            className="font-black ml-auto"
+            className="font-semibold ml-auto"
           >
             {isPending ? "Creating…" : "Create Bet & Get Link"}
           </Button>

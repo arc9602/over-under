@@ -75,7 +75,7 @@ export function InviteSharePanel({
       <CardContent className="p-4">
         {betId && (
           <div className="mb-4 border-b border-border pb-4">
-            <p className="mb-2 text-xs font-black tracking-widest text-primary">
+            <p className="mb-2 text-xs font-semibold tracking-widest text-primary">
               INVITE A FRIEND
             </p>
             {friends.length === 0 ? (
@@ -122,7 +122,7 @@ export function InviteSharePanel({
             )}
           </div>
         )}
-        <p className="text-xs font-black tracking-widest text-primary mb-2">INVITE LINK</p>
+        <p className="text-xs font-semibold tracking-widest text-primary mb-2">INVITE LINK</p>
         <p className="text-xs text-muted-foreground mb-3">{blurb}</p>
         <div className="flex items-center gap-2 bg-background rounded border border-border px-3 py-2 mb-3">
           <span className="text-xs text-muted-foreground flex-1 truncate">{inviteUrl}</span>

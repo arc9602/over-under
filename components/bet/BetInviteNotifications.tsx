@@ -46,7 +46,7 @@ export function BetInviteNotifications({
   return (
     <section className="space-y-3" aria-labelledby="bet-invites-heading">
       <div>
-        <h2 id="bet-invites-heading" className="text-base font-black">
+        <h2 id="bet-invites-heading" className="text-base font-semibold">
           Bet invitations
         </h2>
         <p className="text-xs text-muted-foreground">

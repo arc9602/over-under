@@ -112,7 +112,7 @@ export function OrderTicket({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="price">Your price</Label>
-          <span className="text-sm font-black text-primary tabular-nums">{formatCents(price)}</span>
+          <span className="text-sm font-semibold text-primary tabular-nums">{formatCents(price)}</span>
         </div>
         <input
           id="price"
@@ -195,7 +195,7 @@ export function OrderTicket({
         </button>
       )}
 
-      <Button type="submit" className="w-full font-black text-base py-6" disabled={isPending}>
+      <Button type="submit" className="w-full font-semibold text-base py-6" disabled={isPending}>
         {isPending
           ? "Placing order…"
           : `Buy ${quantity} ${label} at ${formatCents(price)}`}

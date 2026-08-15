@@ -30,7 +30,7 @@ export function MarketCard({ market, currentUserId }: MarketCardProps) {
             {market.last_price != null && (
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 text-[10px] font-black tracking-wide shrink-0",
+                  "inline-flex items-center gap-1 text-[10px] font-semibold tracking-wide shrink-0",
                   favorsYes ? "text-win" : "text-loss"
                 )}
               >
@@ -51,7 +51,7 @@ export function MarketCard({ market, currentUserId }: MarketCardProps) {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Stake</p>
-                <p className="text-sm font-black tabular-nums">
+                <p className="text-sm font-semibold tabular-nums">
                   {formatCurrency(centsToDollars(position.costCents))}
                 </p>
               </div>
@@ -61,7 +61,7 @@ export function MarketCard({ market, currentUserId }: MarketCardProps) {
                 </p>
                 <p
                   className={cn(
-                    "text-sm font-black tabular-nums",
+                    "text-sm font-semibold tabular-nums",
                     valueCents >= position.costCents ? "text-win" : "text-loss"
                   )}
                 >

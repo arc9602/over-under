@@ -44,7 +44,7 @@ export default async function MarketsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black">Markets</h1>
+          <h1 className="text-2xl font-bold">Markets</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Trade the odds with your friends
           </p>
@@ -62,13 +62,13 @@ export default async function MarketsPage() {
           <Card>
             <CardContent className="p-3">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Trading</p>
-              <p className="text-xl font-black tabular-nums">{tradingMarkets.length}</p>
+              <p className="text-xl font-semibold tabular-nums">{tradingMarkets.length}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">At Risk</p>
-              <p className="text-xl font-black tabular-nums text-primary">
+              <p className="text-xl font-semibold tabular-nums text-primary">
                 {formatCurrency(totalAtRisk)}
               </p>
             </CardContent>

@@ -82,7 +82,7 @@ export function MarketResolutionPanel({
         >
           <CardContent className="p-4 text-center">
             <p
-              className={`font-black text-2xl tabular-nums ${
+              className={`font-semibold text-2xl tabular-nums ${
                 brokeEven ? "" : won ? "text-win" : "text-destructive"
               }`}
             >
@@ -119,7 +119,7 @@ export function MarketResolutionPanel({
     return (
       <Card>
         <CardContent className="p-4">
-          <p className="text-xs font-black tracking-widest text-muted-foreground mb-3">
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground mb-3">
             HOW DID IT RESOLVE?
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -176,7 +176,7 @@ export function MarketResolutionPanel({
       return (
         <Card className="border-resolving/30 bg-resolving/5">
           <CardContent className="p-4">
-            <p className="text-xs font-black tracking-widest text-resolving mb-2">
+            <p className="text-xs font-semibold tracking-widest text-resolving mb-2">
               AWAITING CONFIRMATION
             </p>
             <p className="text-sm">
@@ -194,7 +194,7 @@ export function MarketResolutionPanel({
     return (
       <Card className="border-resolving/30 bg-resolving/5">
         <CardContent className="p-4">
-          <p className="text-xs font-black tracking-widest text-resolving mb-2">
+          <p className="text-xs font-semibold tracking-widest text-resolving mb-2">
             RESOLUTION PROPOSED
           </p>
           <p className="text-sm mb-4">

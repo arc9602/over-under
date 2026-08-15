@@ -19,7 +19,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="max-w-lg mx-auto">
-      <h1 className="text-2xl font-black mb-6">Settings</h1>
+      <h1 className="text-2xl font-bold mb-6">Settings</h1>
       <ProfileSettingsForm profile={profile as Profile} />
     </div>
   );

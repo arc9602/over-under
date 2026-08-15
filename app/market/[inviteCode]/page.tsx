@@ -23,7 +23,7 @@ export default async function MarketInviteLandingPage({ params }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-2xl font-black">Market not found</p>
+          <p className="text-2xl font-bold">Market not found</p>
           <p className="text-muted-foreground text-sm mt-2">This invite link may have expired or is invalid.</p>
           {/* "/" works for a visitor in either auth state: it bounces a signed-in
               user straight to /dashboard and shows the landing page to everyone
@@ -137,7 +137,7 @@ export default async function MarketInviteLandingPage({ params }: Props) {
 
             {/* Backing -- visible without scrolling, never left to inference. */}
             <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/40 px-2.5 py-2">
-              <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-black tracking-widest text-primary">
+              <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-widest text-primary">
                 {backingLabel}
               </span>
               <span className="text-xs text-muted-foreground">{backingBlurb}</span>

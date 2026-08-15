@@ -23,7 +23,7 @@ export default async function InviteLandingPage({ params }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-2xl font-black">Bet not found</p>
+          <p className="text-2xl font-bold">Bet not found</p>
           <p className="text-muted-foreground text-sm mt-2">This invite link may have expired or is invalid.</p>
           {/* "/" works for a visitor in either auth state: it bounces a signed-in
               user straight to /dashboard and shows the landing page to everyone

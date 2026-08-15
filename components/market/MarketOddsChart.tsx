@@ -44,13 +44,13 @@ export function MarketOddsChart({ data, yesLabel, noLabel, className }: MarketOd
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black tracking-widest text-muted-foreground uppercase truncate">
+            <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase truncate">
               {shown ? (shownFavorsYes ? yesLabel : noLabel) : "Odds"}
             </p>
             {shown ? (
               <div className="flex items-baseline gap-2">
                 <span
-                  className={`text-3xl font-black tabular-nums ${
+                  className={`text-3xl font-semibold tabular-nums ${
                     shownFavorsYes ? "text-win" : "text-loss"
                   }`}
                 >
@@ -61,7 +61,7 @@ export function MarketOddsChart({ data, yesLabel, noLabel, className }: MarketOd
                 </span>
               </div>
             ) : (
-              <span className="text-3xl font-black text-muted-foreground">—</span>
+              <span className="text-3xl font-semibold text-muted-foreground">—</span>
             )}
           </div>
           <TimeframeTabs value={timeframe} onChange={setTimeframe} />

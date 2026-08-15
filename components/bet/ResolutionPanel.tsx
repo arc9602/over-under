@@ -96,7 +96,7 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
         <Card className={won ? "border-win/50 bg-win/5" : broke_even ? "" : "border-destructive/30 bg-destructive/5"}>
           <CardContent className="p-4 text-center">
             <p
-              className={`font-black text-2xl tabular-nums ${
+              className={`font-semibold text-2xl tabular-nums ${
                 broke_even ? "" : won ? "text-win" : "text-destructive"
               }`}
             >
@@ -132,7 +132,7 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
     return (
       <Card>
         <CardContent className="p-4">
-          <p className="text-xs font-black tracking-widest text-muted-foreground mb-3">WHO WON?</p>
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground mb-3">WHO WON?</p>
           <div className="grid grid-cols-2 gap-2">
             {isTwoOption
               ? (["a", "b"] as const).map((side) => {
@@ -198,7 +198,7 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
       return (
         <Card className="border-resolving/30 bg-resolving/5">
           <CardContent className="p-4">
-            <p className="text-xs font-black tracking-widest text-resolving mb-2">AWAITING CONFIRMATION</p>
+            <p className="text-xs font-semibold tracking-widest text-resolving mb-2">AWAITING CONFIRMATION</p>
             <p className="text-sm">
               You proposed <span className="font-bold">{label}</span> as the winner.
             </p>
@@ -211,7 +211,7 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
     return (
       <Card className="border-resolving/30 bg-resolving/5">
         <CardContent className="p-4">
-          <p className="text-xs font-black tracking-widest text-resolving mb-2">RESOLUTION PROPOSED</p>
+          <p className="text-xs font-semibold tracking-widest text-resolving mb-2">RESOLUTION PROPOSED</p>
           <p className="text-sm mb-4">
             {proposerName} says <span className="font-bold">{label}</span> won. Do you agree?
           </p>

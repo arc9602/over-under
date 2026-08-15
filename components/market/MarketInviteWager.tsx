@@ -179,7 +179,7 @@ export function MarketInviteWager({
             <span className="font-bold">
               {quantity} {label}
             </span>
-            <span className="font-black tabular-nums">{formatCents(price)}</span>
+            <span className="font-bold tabular-nums">{formatCents(price)}</span>
           </div>
           <div className="space-y-0.5">
             <div className="flex items-center justify-between text-sm">
@@ -203,7 +203,7 @@ export function MarketInviteWager({
           </Button>
           <Button
             type="button"
-            className="flex-[2] font-black"
+            className="flex-[2] font-semibold"
             disabled={isPending}
             onClick={handleConfirmRestored}
           >
@@ -231,7 +231,7 @@ export function MarketInviteWager({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="order-price">Your price</Label>
-                <span className="text-sm font-black text-primary tabular-nums">{formatCents(price)}</span>
+                <span className="text-sm font-semibold text-primary tabular-nums">{formatCents(price)}</span>
               </div>
               <input
                 id="order-price"
@@ -275,7 +275,7 @@ export function MarketInviteWager({
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Win if {label}</span>
-                <span className="font-black text-win tabular-nums">
+                <span className="font-bold text-win tabular-nums">
                   +{formatCurrency(centsToDollars(winCents))}
                 </span>
               </div>
@@ -292,7 +292,7 @@ export function MarketInviteWager({
 
             <Button
               type="button"
-              className="w-full py-6 text-base font-black"
+              className="w-full py-6 text-base font-semibold"
               disabled={!isValidQuantity || isPending}
               onClick={handleCommit}
             >

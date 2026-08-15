@@ -39,7 +39,7 @@ export function MyOrdersList({
   return (
     <Card>
       <CardContent className="p-4 space-y-3">
-        <p className="text-xs font-black tracking-widest text-muted-foreground">YOUR RESTING ORDERS</p>
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground">YOUR RESTING ORDERS</p>
         <ul className="space-y-2">
           {mine.map((order) => (
             <li key={order.id} className="flex items-center justify-between gap-3">

@@ -16,7 +16,7 @@ export function Stepper({ steps, currentIndex, className }: StepperProps) {
           <div key={label} className="flex items-center flex-1 last:flex-none">
             <div
               className={cn(
-                "flex items-center justify-center h-6 w-6 shrink-0 rounded-full text-xs font-black transition-colors",
+                "flex items-center justify-center h-6 w-6 shrink-0 rounded-full text-xs font-semibold transition-colors",
                 i <= currentIndex ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
               )}
             >
