@@ -119,13 +119,17 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Potential win</p>
+                {/* Net, like the settled figure directly below it in the list.
+                    A "win" is what you gain; the gross payout hands your own
+                    stake back and counts it as winnings, so a $5 stake standing
+                    to return $10 read as a $10 win rather than a $5 one. */}
                 <p
                   className={cn(
                     "font-bold text-base tabular-nums",
                     isTwoOption ? (mine.side === "a" ? "text-win" : "text-loss") : "text-primary"
                   )}
                 >
-                  {formatCurrency(preview.payout)}
+                  +{formatCurrency(preview.profit)}
                 </p>
               </div>
             </div>

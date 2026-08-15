@@ -119,8 +119,11 @@ function MyPosition({
           </div>
           <div>
             <p className="text-xs text-muted-foreground">If you&apos;re right</p>
+            {/* Net gain, matching the card and the settled outcome. The gross
+                payout returns the stake as well, which is money the user
+                already had rather than something the bet won them. */}
             <p className={cn("text-xl font-semibold tabular-nums", colorClass)}>
-              {formatCurrency(preview.payout)}
+              +{formatCurrency(preview.profit)}
             </p>
           </div>
         </div>
