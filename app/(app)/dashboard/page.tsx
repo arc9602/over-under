@@ -16,13 +16,9 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getBetOptions, getSideTotals, getOptionTotals } from "@/lib/utils/betPool";
 import { isBetDeletable } from "@/lib/utils/betDelete";
-import type { BetStatus, BetWithDetails } from "@/lib/types";
+import { TERMINAL_STATUSES, type BetStatus, type BetWithDetails } from "@/lib/types";
 
 const LIVE_STATUSES: BetStatus[] = ["open", "active", "locked", "resolving"];
-
-// Mirrors BetCard's own state hierarchy (components/bet/BetCard.tsx) so a row
-// never disagrees with the card it collapses into below md.
-const TERMINAL_STATUSES: BetStatus[] = ["resolved", "cancelled", "expired", "stuck"];
 
 const TABS: { value: string; label: string; statuses: BetStatus[] | "all" }[] = [
   { value: "all", label: "All", statuses: "all" },

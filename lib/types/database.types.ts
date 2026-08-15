@@ -1232,6 +1232,12 @@ export type ResolutionStatus =
  */
 export type MarketStatus = BetStatus;
 
+// Bets and markets share this list because MarketStatus is BetStatus -- a bet
+// or market in one of these has nothing left to decide, it's a record of
+// what happened rather than a position that still needs attention. Shared
+// here so a fifth terminal status only needs to be added in one place.
+export const TERMINAL_STATUSES: BetStatus[] = ["resolved", "cancelled", "expired", "stuck"];
+
 /** A contract side, and also the outcome a market resolves to. */
 export type MarketSide = "yes" | "no";
 

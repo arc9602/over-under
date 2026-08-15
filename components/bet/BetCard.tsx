@@ -14,17 +14,12 @@ import {
   getOptionPariMutuelPreview,
 } from "@/lib/utils/betPool";
 import { getBetOutcome } from "@/lib/utils/betOutcome";
-import type { BetStatus, BetWithDetails } from "@/lib/types";
+import { TERMINAL_STATUSES, type BetWithDetails } from "@/lib/types";
 
 interface BetCardProps {
   bet: BetWithDetails;
   currentUserId: string;
 }
-
-// A bet in one of these has nothing left to decide -- it's a record of what
-// happened, not a position that still needs the user's attention. Everything
-// in A4's "terminal" treatment keys off this list.
-const TERMINAL_STATUSES: BetStatus[] = ["resolved", "cancelled", "expired", "stuck"];
 
 export function BetCard({ bet, currentUserId }: BetCardProps) {
   const options = getBetOptions(bet);

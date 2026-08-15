@@ -9,6 +9,7 @@ export type {
   FriendRequestStatus,
   BetInviteStatus,
 } from "./database.types";
+export { TERMINAL_STATUSES } from "./database.types";
 
 export type {
   Timeframe,

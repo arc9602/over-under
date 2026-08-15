@@ -11,8 +11,9 @@ import type { MarketOddsPoint, Timeframe } from "@/lib/types";
  * Market Detail's odds-over-time chart. `data` must already be sorted
  * ascending by timestamp (lib/utils/marketBook.ts#getOddsHistory produces
  * this shape straight from market_fills, so real usage is just handing that
- * through -- see the mock generators in lib/mocks/chartMockData.ts for the
- * shape a WebSocket feed should append to).
+ * through -- a WebSocket feed should append points of the same shape:
+ * `{ timestamp, yesProbability, noProbability, volume }`, with `volume`
+ * cumulative and `yesProbability` + `noProbability` summing to 100).
  */
 
 interface MarketOddsChartProps {

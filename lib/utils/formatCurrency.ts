@@ -6,9 +6,3 @@ export function formatCurrency(amount: number, currency = "USD"): string {
   }).format(amount);
 }
 
-export function formatCompactCurrency(amount: number): string {
-  if (amount >= 1000) {
-    return `$${(amount / 1000).toFixed(1)}k`;
-  }
-  return `$${amount.toFixed(2)}`;
-}

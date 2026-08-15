@@ -12,13 +12,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getPosition, getBestPrices, centsToDollars, formatCents } from "@/lib/utils/marketBook";
-import type { MarketStatus, MarketWithBook } from "@/lib/types";
+import { TERMINAL_STATUSES, type MarketStatus, type MarketWithBook } from "@/lib/types";
 
 const TRADING_STATUSES: MarketStatus[] = ["open", "active", "locked", "resolving"];
-
-// Mirrors BetRow's state hierarchy (app/(app)/dashboard/page.tsx) so a row
-// never disagrees with the card it collapses into below md.
-const TERMINAL_STATUSES: MarketStatus[] = ["resolved", "cancelled", "expired", "stuck"];
 
 const TABS: { value: string; label: string; statuses: MarketStatus[] | "all" }[] = [
   { value: "all", label: "All", statuses: "all" },

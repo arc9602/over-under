@@ -17,17 +17,12 @@ import {
   getOptionTotals,
 } from "@/lib/utils/betPool";
 import { getBetOutcome, getConfirmedResolution, type BetOutcome } from "@/lib/utils/betOutcome";
-import type { BetStatus, BetWithDetails } from "@/lib/types";
+import { TERMINAL_STATUSES, type BetWithDetails } from "@/lib/types";
 
 interface BetDetailProps {
   bet: BetWithDetails;
   currentUserId: string;
 }
-
-// Same list BetCard keys its terminal treatment off of -- a bet in one of
-// these has nothing left to decide, so it reads as a record rather than an
-// opportunity throughout this component, not just in one spot.
-const TERMINAL_STATUSES: BetStatus[] = ["resolved", "cancelled", "expired", "stuck"];
 
 type PariMutuelPreview = ReturnType<typeof getPariMutuelPreview>;
 type Participant = BetWithDetails["bet_participants"][number];

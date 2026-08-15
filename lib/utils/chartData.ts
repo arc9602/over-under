@@ -79,15 +79,6 @@ export function downsampleSeries<T extends { timestamp: number }>(
   return result;
 }
 
-/** Timeframe-aware short label, for axis ticks. */
-export function formatAxisTime(timestamp: number, timeframe: Timeframe): string {
-  const date = new Date(timestamp);
-  if (timeframe === "1H" || timeframe === "1D") {
-    return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
-  }
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
-}
-
 /** Full precision timestamp, for tooltips. */
 export function formatTooltipTime(timestamp: number): string {
   return new Intl.DateTimeFormat("en-US", {
