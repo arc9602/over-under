@@ -13,12 +13,17 @@ import {
   getOptionTotals,
   getOptionPariMutuelPreview,
 } from "@/lib/utils/betPool";
-import type { BetWithParticipants } from "@/lib/types";
+import type { BetStatus, BetWithParticipants } from "@/lib/types";
 
 interface BetCardProps {
   bet: BetWithParticipants;
   currentUserId: string;
 }
+
+// A bet in one of these has nothing left to decide -- it's a record of what
+// happened, not a position that still needs the user's attention. Everything
+// in A4's "terminal" treatment keys off this list.
+const TERMINAL_STATUSES: BetStatus[] = ["resolved", "cancelled", "expired", "stuck"];
 
 export function BetCard({ bet, currentUserId }: BetCardProps) {
   const options = getBetOptions(bet);
@@ -38,6 +43,9 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
     ? getPariMutuelPreview(bet.bet_participants, mine.side!, currentUserId)
     : getOptionPariMutuelPreview(bet.bet_participants, mine.option_id!, currentUserId);
 
+  const isTerminal = TERMINAL_STATUSES.includes(bet.status);
+  const isResolving = bet.status === "resolving";
+
   // Which way the money is currently leaning -- a live signal, not a fixed
   // per-bet label, since option names are arbitrary and user-chosen.
   const favored = isTwoOption
@@ -53,15 +61,24 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
 
   return (
     <Link href={`/bets/${bet.id}`}>
-      <Card className="hover:border-primary/40 transition-colors cursor-pointer">
+      <Card
+        className={cn(
+          "transition-colors cursor-pointer",
+          // State reads through opacity and ring weight, not color alone,
+          // so the distinction survives for colorblind users too.
+          isTerminal && "opacity-70 hover:border-border",
+          isResolving && "ring-2 ring-resolving/40 hover:ring-resolving/60",
+          !isTerminal && !isResolving && "hover:border-primary/40"
+        )}
+      >
         <CardContent className="p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
             <BetStatusBadge status={bet.status} />
-            {isTwoOption && favored && (
+            {!isTerminal && isTwoOption && favored && (
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 text-[10px] font-black tracking-wide shrink-0",
-                  favored === "a" ? "text-emerald-400" : "text-rose-400"
+                  "inline-flex items-center gap-1 text-xs font-semibold tracking-wide shrink-0",
+                  favored === "a" ? "text-win" : "text-loss"
                 )}
               >
                 {favored === "a" ? (
@@ -72,27 +89,38 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
                 {favored === "a" ? bet.side_a_label : bet.side_b_label}
               </span>
             )}
-            {!isTwoOption && leadingOption && leadingOption.total > 0 && (
-              <span className="text-[10px] font-black tracking-wide text-primary shrink-0 truncate max-w-[45%]">
+            {!isTerminal && !isTwoOption && leadingOption && leadingOption.total > 0 && (
+              <span className="text-xs font-semibold tracking-wide text-primary shrink-0 truncate max-w-[45%]">
                 Leading: {leadingOption.option.label}
               </span>
             )}
           </div>
 
-          <p className="font-bold text-sm leading-snug line-clamp-2">{bet.title}</p>
+          <p className="font-semibold text-sm leading-snug line-clamp-2">{bet.title}</p>
 
           {mine && preview ? (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Stake</p>
-                <p className="text-sm font-black tabular-nums">{formatCurrency(preview.wager)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Potential Win</p>
+                <p className="text-xs text-muted-foreground">Stake</p>
                 <p
                   className={cn(
-                    "text-sm font-black tabular-nums",
-                    isTwoOption ? (mine.side === "a" ? "text-emerald-400" : "text-rose-400") : "text-primary"
+                    "font-bold tabular-nums",
+                    // A settled bet's stake is context, not the headline
+                    // figure it is while the bet is still live.
+                    isTerminal ? "text-sm text-muted-foreground" : "text-base"
+                  )}
+                >
+                  {formatCurrency(preview.wager)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Potential win</p>
+                <p
+                  className={cn(
+                    "font-bold tabular-nums",
+                    isTerminal
+                      ? "text-sm text-muted-foreground"
+                      : cn("text-base", isTwoOption ? (mine.side === "a" ? "text-win" : "text-loss") : "text-primary")
                   )}
                 >
                   {formatCurrency(preview.payout)}
@@ -100,16 +128,18 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
               </div>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              {totalPool > 0 ? `${formatCurrency(totalPool)} in the pool` : "Waiting for wagers"}
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {totalPool > 0
+                ? `${formatCurrency(totalPool)} in the pool`
+                : isTerminal
+                ? "No wagers were placed."
+                : "Waiting for wagers"}
             </p>
           )}
 
-          {isTwoOption && <SplitBar leftValue={sideA.total} rightValue={sideB.total} />}
+          {!isTerminal && isTwoOption && <SplitBar leftValue={sideA.total} rightValue={sideB.total} />}
 
-          {bet.deadline && bet.status !== "resolved" && bet.status !== "cancelled" && (
-            <CountdownTimer deadline={bet.deadline} />
-          )}
+          {!isTerminal && bet.deadline && <CountdownTimer deadline={bet.deadline} />}
         </CardContent>
       </Card>
     </Link>

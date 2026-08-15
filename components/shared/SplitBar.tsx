@@ -13,12 +13,17 @@ interface SplitBarProps {
 export function SplitBar({
   leftValue,
   rightValue,
-  leftColorClassName = "bg-emerald-400",
-  rightColorClassName = "bg-rose-400",
+  leftColorClassName = "bg-win",
+  rightColorClassName = "bg-loss",
   className,
 }: SplitBarProps) {
   const total = leftValue + rightValue;
-  const leftPct = total > 0 ? (leftValue / total) * 100 : 50;
+  // With no money on either side there is nothing to split -- a 50/50 bar
+  // here would draw even odds out of thin air. Guarded here, not at call
+  // sites, so no future caller can reintroduce the false signal.
+  if (total === 0) return null;
+
+  const leftPct = (leftValue / total) * 100;
   const rightPct = 100 - leftPct;
 
   return (

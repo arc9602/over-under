@@ -39,6 +39,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-win: var(--win);
+  --color-resolving: var(--resolving);
+  --color-loss: var(--loss);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -69,9 +72,9 @@
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.84 0.22 128.36);
   /* status colors */
-  --color-win: oklch(0.70 0.17 162);    /* emerald-500 */
-  --color-resolving: oklch(0.80 0.15 75); /* amber-400 */
-  --color-loss: oklch(0.62 0.22 22);    /* rose-500 */
+  --win: oklch(0.70 0.17 162);    /* emerald-500 */
+  --resolving: oklch(0.80 0.15 75); /* amber-400 */
+  --loss: oklch(0.62 0.22 22);    /* rose-500 */
   --radius: 0.625rem;
   --sidebar: oklch(0.12 0 0);
   --sidebar-foreground: oklch(0.97 0 0);
@@ -121,5 +124,37 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Browser surfaces the app otherwise leaves at UA defaults -- the
+     craft-floor tell for a page that was assembled, not built. All three
+     draw from the same token set as everything else, no new colors. */
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-color: var(--muted) var(--background);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background-color: var(--background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--muted);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--background);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
   }
 }
