@@ -999,6 +999,13 @@ export type Database = {
         Args: { p_request_id: string };
         Returns: undefined;
       };
+      delete_bet: {
+        // Migration 018. Returns the deleted bet's id so a caller can
+        // confirm the RPC actually removed a row rather than trusting a
+        // null error alone.
+        Args: { p_bet_id: string };
+        Returns: string;
+      };
       remove_friend: {
         Args: { p_friend_id: string };
         Returns: undefined;

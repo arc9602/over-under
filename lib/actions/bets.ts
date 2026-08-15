@@ -286,3 +286,29 @@ export async function cancelBet(betId: string) {
   revalidatePath(`/bets/${betId}`);
   return { success: true };
 }
+
+/**
+ * Deletes a bet outright rather than cancelling it -- only legal for a bet
+ * that never really became an agreement between people. The RPC (migration
+ * 018) is the actual authority: creator-only, not resolved/resolving, no
+ * bet_participants row besides the creator's own, and no ledger/settlement/
+ * usdc row naming it. This action does no eligibility checking of its own --
+ * the same way cancelBet above leaves its own WHERE clause as the only gate
+ * -- it just forwards the call and turns the RPC's error text into what the
+ * UI shows, same as every other RPC-backed action in this file.
+ */
+export async function deleteBet(betId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const parsedId = uuidSchema.safeParse(betId);
+  if (!parsedId.success) return { error: "Bet not found" };
+
+  const { error } = await supabase.rpc("delete_bet", { p_bet_id: parsedId.data });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}

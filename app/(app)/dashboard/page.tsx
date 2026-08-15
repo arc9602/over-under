@@ -7,12 +7,14 @@ import { BetCard } from "@/components/bet/BetCard";
 import { BetInviteNotifications } from "@/components/bet/BetInviteNotifications";
 import { BetStatusBadge } from "@/components/bet/BetStatusBadge";
 import { CountdownTimer } from "@/components/bet/CountdownTimer";
+import { DeleteBetButton } from "@/components/bet/DeleteBetButton";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getBetOptions, getSideTotals, getOptionTotals } from "@/lib/utils/betPool";
+import { isBetDeletable } from "@/lib/utils/betDelete";
 import type { BetStatus, BetWithDetails } from "@/lib/types";
 
 const LIVE_STATUSES: BetStatus[] = ["open", "active", "locked", "resolving"];
@@ -90,40 +92,56 @@ function BetRow({ bet, currentUserId }: { bet: BetWithDetails; currentUserId: st
 
   const isTerminal = TERMINAL_STATUSES.includes(bet.status);
   const isResolving = bet.status === "resolving";
+  const canDelete = isBetDeletable(bet, currentUserId);
 
   return (
-    <Link
-      href={`/bets/${bet.id}`}
-      className={cn(
-        "grid grid-cols-[1fr_10rem_6rem_6rem_6rem_6.5rem] items-center gap-4 px-4 py-3 transition-colors",
-        // Same non-color-alone rule as BetCard: resolving reads through a
-        // background tint (plus its badge), terminal through opacity.
-        isTerminal ? "opacity-70 hover:bg-secondary/30" : "hover:bg-secondary/50",
-        isResolving && "bg-resolving/10 hover:bg-resolving/15"
-      )}
-    >
-      <span className={cn("font-medium text-sm truncate", isTerminal && "text-muted-foreground font-normal")}>
-        {bet.title}
-      </span>
-      <span className="text-sm text-muted-foreground truncate">{mySideLabel ?? "—"}</span>
-      <span
+    // relative + a sibling (not nested) delete button below -- a <button>
+    // inside this <a> would be invalid HTML and would make the button
+    // mis-clickable-into-navigation impossible to rule out.
+    <div className="relative">
+      <Link
+        href={`/bets/${bet.id}`}
         className={cn(
-          "text-right text-sm tabular-nums",
-          mine && !isTerminal ? "font-semibold text-foreground" : "text-muted-foreground"
+          "grid grid-cols-[1fr_10rem_6rem_6rem_6rem_6.5rem] items-center gap-4 px-4 py-3 transition-colors",
+          // Same non-color-alone rule as BetCard: resolving reads through a
+          // background tint (plus its badge), terminal through opacity.
+          isTerminal ? "opacity-70 hover:bg-secondary/30" : "hover:bg-secondary/50",
+          isResolving && "bg-resolving/10 hover:bg-resolving/15",
+          // Room for the floating delete button so it never sits over the
+          // status badge column.
+          canDelete && "pr-10"
         )}
       >
-        {mine ? formatCurrency(mine.amount) : "—"}
-      </span>
-      <span className="text-right text-sm tabular-nums text-muted-foreground">
-        {totalPool > 0 ? formatCurrency(totalPool) : "—"}
-      </span>
-      <span className="text-right text-sm tabular-nums text-muted-foreground">
-        {!isTerminal && bet.deadline ? <CountdownTimer deadline={bet.deadline} /> : "—"}
-      </span>
-      <span className="flex justify-end">
-        <BetStatusBadge status={bet.status} />
-      </span>
-    </Link>
+        <span className={cn("font-medium text-sm truncate", isTerminal && "text-muted-foreground font-normal")}>
+          {bet.title}
+        </span>
+        <span className="text-sm text-muted-foreground truncate">{mySideLabel ?? "—"}</span>
+        <span
+          className={cn(
+            "text-right text-sm tabular-nums",
+            mine && !isTerminal ? "font-semibold text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {mine ? formatCurrency(mine.amount) : "—"}
+        </span>
+        <span className="text-right text-sm tabular-nums text-muted-foreground">
+          {totalPool > 0 ? formatCurrency(totalPool) : "—"}
+        </span>
+        <span className="text-right text-sm tabular-nums text-muted-foreground">
+          {!isTerminal && bet.deadline ? <CountdownTimer deadline={bet.deadline} /> : "—"}
+        </span>
+        <span className="flex justify-end">
+          <BetStatusBadge status={bet.status} />
+        </span>
+      </Link>
+      {canDelete && (
+        <DeleteBetButton
+          betId={bet.id}
+          betTitle={bet.title}
+          className="absolute right-2 top-1/2 -translate-y-1/2"
+        />
+      )}
+    </div>
   );
 }
 
@@ -201,7 +219,21 @@ export default async function DashboardPage() {
                   {/* Cards below md, where a six-column row has nowhere to go. */}
                   <div className="md:hidden space-y-3">
                     {filtered.map((bet) => (
-                      <BetCard key={bet.id} bet={bet} currentUserId={user.id} />
+                      // BetCard is off-limits to edit (its Link covers the whole
+                      // card), so the delete control floats as a corner badge
+                      // outside the card entirely rather than overlapping any of
+                      // its content -- a sibling of BetCard's own <Link>, not
+                      // nested inside it.
+                      <div key={bet.id} className="relative">
+                        <BetCard bet={bet} currentUserId={user.id} />
+                        {isBetDeletable(bet, user.id) && (
+                          <DeleteBetButton
+                            betId={bet.id}
+                            betTitle={bet.title}
+                            className="absolute -top-2 -right-2 z-10 rounded-full bg-background ring-1 ring-border shadow-sm"
+                          />
+                        )}
+                      </div>
                     ))}
                   </div>
                   {/* Rows from md up -- ten-plus visible at once instead of
