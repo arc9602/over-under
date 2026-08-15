@@ -1,0 +1,118 @@
+name: Deploy
+
+# Pushes to main deploy to production. Pull requests run the checks only, so a
+# branch is verified before it can become a deploy.
+#
+# workflow_dispatch is kept deliberately: when a deploy needs re-running without
+# a code change (a rotated secret, a failed upload), a manual run is better than
+# an empty commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time. Two pushes in quick succession would otherwise race and
+# the slower build could land last, putting older code live. Deploys are not
+# cancelled mid-flight -- an interrupted wrangler upload is a worse state than a
+# queued one -- but redundant PR check runs are.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: Typecheck, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24: tests run through `node --test` against .ts files directly and
+      # rely on native type stripping. An older major will fail to parse them.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Tests
+        run: npm test
+
+      # The build is part of verification, not just a deploy step: Next inlines
+      # every NEXT_PUBLIC_* value into the client bundle at build time, so a
+      # build is the only thing that proves those resolve.
+      - name: Build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          NEXT_PUBLIC_CHAIN_ID: ${{ vars.NEXT_PUBLIC_CHAIN_ID }}
+          NEXT_PUBLIC_RPC_URL: ${{ vars.NEXT_PUBLIC_RPC_URL }}
+          NEXT_PUBLIC_USDC_CONTRACT_ADDRESS: ${{ vars.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS }}
+          NEXT_PUBLIC_USDC_DECIMALS: ${{ vars.NEXT_PUBLIC_USDC_DECIMALS }}
+          NEXT_PUBLIC_VAULT_ADDRESS: ${{ vars.NEXT_PUBLIC_VAULT_ADDRESS }}
+
+  deploy:
+    name: Deploy to Cloudflare
+    needs: verify
+    # Only main deploys. A green PR proves the branch builds; it does not put
+    # anything live.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Point this at a GitHub Environment with a required reviewer if you ever
+    # want a human gate between a merge and production. Leaving it named also
+    # means deploy history shows up per-environment rather than as bare runs.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run deploy` is `opennextjs-cloudflare build && opennextjs-cloudflare
+      # deploy`, and the chaining is the point. Calling the deploy sub-command
+      # alone uploads whatever is already in .open-next/ and will happily ship a
+      # stale bundle while printing a fresh Version ID. Do not "optimise" this
+      # into reusing the verify job's build artifact unless that artifact is the
+      # .open-next/ worker specifically -- `next build` output is not it.
+      - name: Build and deploy
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+          # These must match the verify job exactly. Next bakes NEXT_PUBLIC_*
+          # into the client bundle at build time, so a missing one here does not
+          # fail the build -- it inlines `undefined` and ships a site whose
+          # Supabase client cannot connect. Green run, broken production.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          NEXT_PUBLIC_CHAIN_ID: ${{ vars.NEXT_PUBLIC_CHAIN_ID }}
+          NEXT_PUBLIC_RPC_URL: ${{ vars.NEXT_PUBLIC_RPC_URL }}
+          NEXT_PUBLIC_USDC_CONTRACT_ADDRESS: ${{ vars.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS }}
+          NEXT_PUBLIC_USDC_DECIMALS: ${{ vars.NEXT_PUBLIC_USDC_DECIMALS }}
+          NEXT_PUBLIC_VAULT_ADDRESS: ${{ vars.NEXT_PUBLIC_VAULT_ADDRESS }}
+
+      # Cheap proof the deploy actually serves the new code. Only public routes
+      # are reachable without auth, so this checks liveness rather than the
+      # change itself -- but a 200 on / and /login catches the case where a
+      # deploy uploads successfully and the Worker then fails to boot.
+      - name: Smoke check
+        run: |
+          set -euo pipefail
+          for path in "" "login"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://over-under.us/${path}")
+            echo "/${path} -> ${code}"
+            [ "$code" = "200" ]
+          done
