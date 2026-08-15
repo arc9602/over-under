@@ -149,13 +149,16 @@ function MyPosition({
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{outcome.kind === "won" ? "Won" : "Lost"}</p>
+            {/* Net, stake excluded, signed -- matching BetWagerChart's line and
+                BetCard's figure so all three describe the same result. */}
             <p
               className={cn(
                 "text-lg font-semibold tabular-nums",
                 outcome.kind === "won" ? "text-win" : "text-loss"
               )}
             >
-              {formatCurrency(outcome.amount)}
+              {outcome.net >= 0 ? "+" : "−"}
+              {formatCurrency(Math.abs(outcome.net))}
             </p>
           </div>
         </div>

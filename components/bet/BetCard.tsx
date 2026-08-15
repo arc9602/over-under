@@ -139,13 +139,16 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">{outcome.kind === "won" ? "Won" : "Lost"}</p>
+                {/* Signed the same way BetWagerChart signs its line, so the two
+                    never disagree about what a result was worth. */}
                 <p
                   className={cn(
                     "font-semibold text-sm tabular-nums",
                     outcome.kind === "won" ? "text-win" : "text-loss"
                   )}
                 >
-                  {formatCurrency(outcome.amount)}
+                  {outcome.net >= 0 ? "+" : "−"}
+                  {formatCurrency(Math.abs(outcome.net))}
                 </p>
               </div>
             </div>

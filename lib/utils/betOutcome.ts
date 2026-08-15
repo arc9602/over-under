@@ -7,9 +7,21 @@ import { getPariMutuelPreview, getOptionPariMutuelPreview } from "./betPool.ts";
 
 type Participant = BetParticipant & { profiles: Profile };
 
+/**
+ * `net` is signed profit with the stake excluded: positive on a win, negative
+ * on a loss. Deliberately not the gross payout, which folds the user's own
+ * stake back into the figure and so reads as a bigger win than it was -- a $20
+ * stake returning $50 gross is a $30 win, not a $50 one. BetWagerChart already
+ * made this argument for its own line; this is the same number, so the card,
+ * the detail screen and the chart finally agree.
+ *
+ * The field is named `net` rather than `amount` on purpose: the meaning changed
+ * and the old name would have compiled fine at every call site while quietly
+ * showing a different number.
+ */
 export type BetOutcome =
-  | { kind: "won"; amount: number }
-  | { kind: "lost"; amount: number }
+  | { kind: "won"; net: number }
+  | { kind: "lost"; net: number }
   // No confirmed resolution to claim an outcome from -- covers a bet that's
   // resolved with no confirmed row yet, cancelled, expired, or stuck. None of
   // those are a reason to tell someone they won or lost anything.
@@ -51,14 +63,14 @@ export function getBetOutcome(
     const preview = getPariMutuelPreview(participants, confirmed.proposed_winner_side, userId);
     if (!preview.isParticipant) return { kind: "none" };
     return mine.side === confirmed.proposed_winner_side
-      ? { kind: "won", amount: preview.payout }
-      : { kind: "lost", amount: preview.wager };
+      ? { kind: "won", net: preview.profit }
+      : { kind: "lost", net: preview.profit };
   }
 
   if (!confirmed.proposed_winner_option_id) return { kind: "none" };
   const preview = getOptionPariMutuelPreview(participants, confirmed.proposed_winner_option_id, userId);
   if (!preview.isParticipant) return { kind: "none" };
   return mine.option_id === confirmed.proposed_winner_option_id
-    ? { kind: "won", amount: preview.payout }
-    : { kind: "lost", amount: preview.wager };
+    ? { kind: "won", net: preview.profit }
+    : { kind: "lost", net: preview.profit };
 }

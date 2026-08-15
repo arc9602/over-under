@@ -68,7 +68,7 @@ const outcome = getBetOutcome as unknown as (
   resolutions: ReturnType<typeof resolution>[],
   userId: string,
   isTwoOption: boolean
-) => { kind: "won" | "lost" | "none"; amount?: number };
+) => { kind: "won" | "lost" | "none"; net?: number };
 
 const confirmedResolution = getConfirmedResolution as unknown as (
   resolutions: ReturnType<typeof resolution>[]
@@ -96,7 +96,7 @@ describe("getConfirmedResolution", () => {
 });
 
 describe("getBetOutcome -- two-option bets", () => {
-  test("the winning side sees 'won' with the real payout, not their own stake back", () => {
+  test("the winning side sees 'won' with net profit, its own stake excluded", () => {
     const participants = [
       participant({ userId: "alice", amount: 10, side: "a" }),
       participant({ userId: "bob", amount: 10, side: "b" }),
@@ -105,8 +105,10 @@ describe("getBetOutcome -- two-option bets", () => {
 
     const result = outcome(participants, resolutions, "alice", true);
     assert.equal(result.kind, "won");
-    // Pari-mutuel: alice's 10 plus her full share of bob's losing 10.
-    assert.equal(result.amount, 20);
+    // Pari-mutuel: alice's full share of bob's losing 10. Her own 10 comes
+    // back too, but that was already hers -- the gross 20 would read as twice
+    // the win it actually was.
+    assert.equal(result.net, 10);
   });
 
   test("the losing side sees 'lost' with the stake they gave up -- the bug this replaces", () => {
@@ -121,19 +123,20 @@ describe("getBetOutcome -- two-option bets", () => {
     // always resolved to bob's own side, i.e. always a false 'won'.
     const result = outcome(participants, resolutions, "bob", true);
     assert.equal(result.kind, "lost");
-    assert.equal(result.amount, 10);
+    // Signed: the stake is gone, so the net is negative.
+    assert.equal(result.net, -10);
   });
 
   test("a winner with nobody on the other side still 'won', even with zero profit", () => {
     // Regression guard for a naive `payout > 0` heuristic: a win with no
-    // losing pool pays back exactly the stake (profit 0), which must not be
-    // mistaken for a loss.
+    // losing pool nets exactly zero, which must not be mistaken for a loss.
+    // This is why 'won' is decided by the resolution, never by the figure.
     const participants = [participant({ userId: "alice", amount: 10, side: "a" })];
     const resolutions = [resolution({ status: "confirmed", winnerSide: "a" })];
 
     const result = outcome(participants, resolutions, "alice", true);
     assert.equal(result.kind, "won");
-    assert.equal(result.amount, 10);
+    assert.equal(result.net, 0);
   });
 
   test("no confirmed resolution yet -- pending only -- makes no outcome claim", () => {
@@ -184,7 +187,7 @@ describe("getBetOutcome -- multi-option bets", () => {
 
     const result = outcome(participants, resolutions, "alice", false);
     assert.equal(result.kind, "won");
-    assert.equal(result.amount, 20); // 10 + full share of the 10 losing pool
+    assert.equal(result.net, 10); // full share of the 10 losing pool, stake excluded
   });
 
   test("a non-winning option sees 'lost'", () => {
@@ -196,6 +199,6 @@ describe("getBetOutcome -- multi-option bets", () => {
 
     const result = outcome(participants, resolutions, "bob", false);
     assert.equal(result.kind, "lost");
-    assert.equal(result.amount, 5);
+    assert.equal(result.net, -5);
   });
 });
