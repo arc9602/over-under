@@ -233,5 +233,101 @@ guaranteed.
 
 # SECTION C — remaining token migration (NOT your scope)
 
-The other ~80 raw palette classes across chart, wallet, market, and balance components. Separate
+The other ~78 raw palette classes across chart, wallet, market, and balance components. Separate
 pass, separate review.
+
+---
+
+# SECTION D — a settled bet must show what actually happened
+
+## The bug, traced rather than assumed
+
+`components/bet/BetCard.tsx:42` calls:
+
+```ts
+getPariMutuelPreview(bet.bet_participants, mine.side!, currentUserId)
+```
+
+It passes **the user's own side** as the `winnerSide` argument. Inside
+`lib/utils/betPool.ts`, the guard `if (mine.side !== winnerSide)` — the branch that returns
+`payout: 0, profit: -mine.amount` — can therefore never be true from this call site. It is
+unreachable. Every call falls through to the winning computation.
+
+Consequence: **a resolved bet the user lost displays a positive figure labeled "Potential win."**
+An earlier report claimed it shows `$0.00` on a loss. It does not; that claim was wrong, and it is
+why this section exists.
+
+This is display-only — settlement runs through the `confirm_resolution` RPC and the ledger is
+unaffected — but a money product telling someone they won something they lost is not acceptable.
+
+## Verified facts (do not re-derive; do confirm if you touch them)
+
+- `lib/queries/bets.ts:4` `getBetsForUser` does **not** select resolutions.
+  `getBetById` at line 60 does (`resolutions (*)`).
+- `lib/types/index.ts:44` `BetWithParticipants` has no `resolutions`. Line 50 `BetWithDetails` is
+  the same shape **plus** `resolutions: Resolution[]`.
+- `resolutions` columns: `proposed_winner_side` (`'a'|'b'`, nullable since migration 012),
+  `proposed_winner_option_id` (UUID, nullable), with a XOR constraint that exactly one is
+  non-null; and `status` in `('pending','confirmed','disputed','superseded')`.
+- Blast radius is fully contained: `getBetsForUser` is called only by
+  `app/(app)/dashboard/page.tsx`; `BetCard` is rendered only there; `BetWithParticipants` appears
+  in only four files.
+
+## Authorized exceptions
+
+Every other section forbids query and type changes. **This section explicitly permits exactly
+two**, and nothing beyond them:
+
+1. `getBetsForUser` may gain `resolutions (*)` in its select.
+2. `lib/types/index.ts` may change so the dashboard's bets carry `resolutions`. `BetWithDetails`
+   already describes that shape — prefer reusing it over inventing a third type.
+
+Still forbidden: any server action, API route, validation schema, SQL migration, or RPC.
+
+## The fix
+
+The minimal correct change is at the **call site**, not in `betPool.ts`. `getPariMutuelPreview`
+is already correct; it was being asked the wrong question. Pass the **actual confirmed winner**
+instead of the user's own side, and its existing zero-payout branch starts working:
+
+- Two-option: pass the confirmed resolution's `proposed_winner_side`.
+- Multi-option: pass its `proposed_winner_option_id` to `getOptionPariMutuelPreview`.
+
+**Only a resolution with `status === 'confirmed'` is an outcome.** `pending`, `disputed`, and
+`superseded` are not. Never render a win or loss without a confirmed row.
+
+## Required display behavior
+
+| Bet state | What the card shows |
+|---|---|
+| Non-terminal, user has a stake | Unchanged — `Potential win`, the live projection, still labelled as moving |
+| `resolved`, confirmed resolution, user's side won | `Won` and the real amount |
+| `resolved`, confirmed resolution, user's side lost | `Lost` and the stake they gave up |
+| `resolved` but **no** confirmed resolution | No outcome claim. Show the stake only. |
+| `cancelled` | See below — check the SQL before writing copy |
+| `expired` / `stuck` | No outcome claim. Show the stake only. |
+
+**On `cancelled`: do not guess.** Read the cancellation path in `supabase/migrations/` and
+determine whether stakes are actually returned. If they are, say so plainly. If they are not, or
+you cannot tell, show the stake with neutral language and **report what you found** rather than
+writing reassuring copy that may be false.
+
+Keep `tabular-nums` on every figure. Use `text-win` / `text-loss` for outcomes — those utilities
+work now. Never carry the win/loss distinction by color alone.
+
+## Verify
+
+```bash
+$env:Path = "C:\Program Files\nodejs;$env:Path"; npx tsc --noEmit
+```
+```bash
+$env:Path = "C:\Program Files\nodejs;$env:Path"; npm test
+```
+```bash
+node .claude/skills/impeccable/scripts/detect.mjs components/bet/BetCard.tsx
+```
+
+`tests/` uses `node:test` with no DOM, so pure functions are testable and components are not. If
+you add a helper that picks the confirmed resolution and derives the outcome, **write tests for
+it** — that is exactly the kind of pure logic this suite covers, and it is where a mistake would
+be silent and about money.
