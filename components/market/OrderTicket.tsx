@@ -157,7 +157,7 @@ export function OrderTicket({
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Win if {label}</span>
-          <span className="font-bold text-emerald-400 tabular-nums">
+          <span className="font-bold text-win tabular-nums">
             +{formatCurrency(centsToDollars(winCents))}
           </span>
         </div>

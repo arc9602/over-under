@@ -77,7 +77,13 @@
   /* status colors */
   --win: oklch(0.70 0.17 162);    /* emerald-500 */
   --resolving: oklch(0.80 0.15 75); /* amber-400 */
-  --loss: oklch(0.62 0.22 22);    /* rose-500 */
+  /* Lightened from rose-500 (L 0.62) after measuring the migration that put
+     this token into real use. Most loss-coloured text sits on --card, not on
+     --background, and rose-500 there is 4.19:1 -- under the 4.5:1 floor for
+     body text. The raw rose-400 these components used before was 6.33:1, so
+     adopting the token as-is would have quietly cost contrast the UI already
+     had. L 0.68 restores 5.19:1 on card and 6.03:1 on background. */
+  --loss: oklch(0.68 0.22 22);
   --radius: 0.625rem;
   --sidebar: oklch(0.12 0 0);
   --sidebar-foreground: oklch(0.97 0 0);
@@ -160,6 +166,34 @@
   ::-webkit-scrollbar-thumb:hover {
     background-color: var(--muted-foreground);
   }
+}
+
+/* Dashboard list stagger (plan 003) -- each row/card carries an index-driven
+   --i custom property (capped at 8 by the caller), so the eye gets an order
+   to follow instead of ten items landing in one frame. animation-fill-mode
+   is deliberately left at its default (none): the keyframe's opacity: 0 only
+   ever applies while the animation is actively playing. During the delay --
+   and whenever the animation is unsupported entirely, or its duration is
+   zeroed out by the prefers-reduced-motion rule below -- the element falls
+   back to ordinary cascade rules, and opacity is never set to 0 anywhere
+   outside this keyframes block. That's what keeps rows/cards visible and
+   clickable even if this animation never fires. */
+@keyframes dashboard-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-stagger-item {
+  animation: dashboard-stagger-in 260ms var(--ease-out);
+  /* --i is set inline per item, already capped at 8 -- 8 * 50ms = 400ms,
+     the budget ceiling from plan 003. */
+  animation-delay: calc(var(--i, 0) * 50ms);
 }
 
 @media (prefers-reduced-motion: reduce) {

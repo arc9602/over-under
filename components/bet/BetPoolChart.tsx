@@ -50,7 +50,7 @@ export function BetPoolChart({ data, sideALabel, sideBLabel, className }: BetPoo
               <div className="flex items-baseline gap-2">
                 <span
                   className={`text-3xl font-black tabular-nums ${
-                    shownFavorsA ? "text-emerald-400" : "text-rose-400"
+                    shownFavorsA ? "text-win" : "text-loss"
                   }`}
                 >
                   {Math.round(shownFavorsA ? shown.sideAProbability : shown.sideBProbability)}%
@@ -69,7 +69,7 @@ export function BetPoolChart({ data, sideALabel, sideBLabel, className }: BetPoo
         <ProbabilityChart
           points={visible}
           getY={(p) => p.sideAProbability}
-          lineColorClassName={lineFavorsA ? "text-emerald-400" : "text-rose-400"}
+          lineColorClassName={lineFavorsA ? "text-win" : "text-loss"}
           onHoverChange={setHovered}
           emptyMessage="No wagers yet"
           renderTooltip={(p) => (

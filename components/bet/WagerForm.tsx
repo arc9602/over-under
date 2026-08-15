@@ -111,7 +111,7 @@ export function WagerForm({
             <span className="text-muted-foreground">Profit</span>
             <span
               className={`font-bold tabular-nums ${
-                preview.profit > 0 ? "text-emerald-400" : "text-muted-foreground"
+                preview.profit > 0 ? "text-win" : "text-muted-foreground"
               }`}
             >
               {preview.profit > 0 ? "+" : ""}

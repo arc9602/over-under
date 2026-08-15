@@ -173,7 +173,7 @@ function ConnectedWalletButton() {
                 wallet to deposit.
               </p>
             ) : !isLinked ? (
-              <p className="mt-2 text-xs text-amber-400">Not linked yet — link to deposit.</p>
+              <p className="mt-2 text-xs text-resolving">Not linked yet — link to deposit.</p>
             ) : null}
           </div>
           <DropdownMenuSeparator />

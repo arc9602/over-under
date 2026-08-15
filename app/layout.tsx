@@ -43,7 +43,7 @@ export default function RootLayout({
               actionButton: "!bg-primary !text-primary-foreground",
               cancelButton: "!bg-secondary !text-secondary-foreground",
               error: "!text-destructive",
-              success: "!text-emerald-400",
+              success: "!text-win",
             },
           }}
         />

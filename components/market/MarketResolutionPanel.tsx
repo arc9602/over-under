@@ -74,7 +74,7 @@ export function MarketResolutionPanel({
         <Card
           className={
             won
-              ? "border-emerald-500/50 bg-emerald-500/5"
+              ? "border-win/50 bg-win/5"
               : brokeEven
               ? ""
               : "border-destructive/30 bg-destructive/5"
@@ -83,7 +83,7 @@ export function MarketResolutionPanel({
           <CardContent className="p-4 text-center">
             <p
               className={`font-black text-2xl tabular-nums ${
-                brokeEven ? "" : won ? "text-emerald-400" : "text-destructive"
+                brokeEven ? "" : won ? "text-win" : "text-destructive"
               }`}
             >
               {brokeEven
@@ -139,7 +139,7 @@ export function MarketResolutionPanel({
                   {preview.isParticipant && (
                     <span
                       className={`text-xs ${
-                        preview.profitCents >= 0 ? "text-emerald-500" : "text-muted-foreground"
+                        preview.profitCents >= 0 ? "text-win" : "text-muted-foreground"
                       }`}
                     >
                       {preview.profitCents >= 0
@@ -174,9 +174,9 @@ export function MarketResolutionPanel({
 
     if (isProposer) {
       return (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-resolving/30 bg-resolving/5">
           <CardContent className="p-4">
-            <p className="text-xs font-black tracking-widest text-amber-400 mb-2">
+            <p className="text-xs font-black tracking-widest text-resolving mb-2">
               AWAITING CONFIRMATION
             </p>
             <p className="text-sm">
@@ -192,9 +192,9 @@ export function MarketResolutionPanel({
     }
 
     return (
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-resolving/30 bg-resolving/5">
         <CardContent className="p-4">
-          <p className="text-xs font-black tracking-widest text-amber-400 mb-2">
+          <p className="text-xs font-black tracking-widest text-resolving mb-2">
             RESOLUTION PROPOSED
           </p>
           <p className="text-sm mb-4">

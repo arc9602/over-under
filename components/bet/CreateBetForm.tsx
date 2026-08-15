@@ -369,9 +369,9 @@ export function CreateBetForm() {
               <dd className="font-medium text-right">
                 {isTwoOption ? (
                   <>
-                    <span className="text-emerald-400">{trimmedOptions[0]}</span>
+                    <span className="text-win">{trimmedOptions[0]}</span>
                     {" / "}
-                    <span className="text-rose-400">{trimmedOptions[1]}</span>
+                    <span className="text-loss">{trimmedOptions[1]}</span>
                   </>
                 ) : (
                   trimmedOptions.join(" · ")

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -71,7 +72,7 @@ function sortBets(bets: BetWithDetails[], userId: string) {
 // The dense row a bet collapses into at md and up. Carries the same fields
 // as BetCard -- title, the user's side, stake, pool, deadline, status -- just
 // laid out for scanning ten-plus at once instead of reading one at a time.
-function BetRow({ bet, currentUserId }: { bet: BetWithDetails; currentUserId: string }) {
+function BetRow({ bet, currentUserId, i }: { bet: BetWithDetails; currentUserId: string; i: number }) {
   const options = getBetOptions(bet);
   const isTwoOption = options.length === 2;
   const sideA = getSideTotals(bet.bet_participants, "a");
@@ -98,7 +99,10 @@ function BetRow({ bet, currentUserId }: { bet: BetWithDetails; currentUserId: st
     // relative + a sibling (not nested) delete button below -- a <button>
     // inside this <a> would be invalid HTML and would make the button
     // mis-clickable-into-navigation impossible to rule out.
-    <div className="relative">
+    <div
+      className="relative dashboard-stagger-item"
+      style={{ "--i": String(Math.min(i, 8)) } as CSSProperties}
+    >
       <Link
         href={`/bets/${bet.id}`}
         className={cn(
@@ -206,7 +210,17 @@ export default async function DashboardPage() {
         {TABS.map((tab) => {
           const filtered = sortBets(filterBets(bets, tab.statuses), user.id);
           return (
-            <TabsContent key={tab.value} value={tab.value} className="mt-4">
+            <TabsContent
+              key={tab.value}
+              value={tab.value}
+              // Base UI's Tabs.Panel marks a freshly-activated panel with
+              // data-starting-style for exactly one frame (see
+              // node_modules/@base-ui/react/tabs/panel/TabsPanel.mjs) --
+              // opacity-100 is the resting class, so a panel is fully
+              // visible by default and only dips before the transition
+              // plays if a tab switch triggers it.
+              className="mt-4 opacity-100 transition-opacity duration-150 ease-[var(--ease-out)] data-starting-style:opacity-0"
+            >
               {filtered.length === 0 ? (
                 <EmptyState
                   title={EMPTY_STATE_COPY[tab.value].title}
@@ -218,13 +232,17 @@ export default async function DashboardPage() {
                 <>
                   {/* Cards below md, where a six-column row has nowhere to go. */}
                   <div className="md:hidden space-y-3">
-                    {filtered.map((bet) => (
+                    {filtered.map((bet, i) => (
                       // BetCard is off-limits to edit (its Link covers the whole
                       // card), so the delete control floats as a corner badge
                       // outside the card entirely rather than overlapping any of
                       // its content -- a sibling of BetCard's own <Link>, not
                       // nested inside it.
-                      <div key={bet.id} className="relative">
+                      <div
+                        key={bet.id}
+                        className="relative dashboard-stagger-item"
+                        style={{ "--i": String(Math.min(i, 8)) } as CSSProperties}
+                      >
                         <BetCard bet={bet} currentUserId={user.id} />
                         {isBetDeletable(bet, user.id) && (
                           <DeleteBetButton
@@ -248,8 +266,8 @@ export default async function DashboardPage() {
                       <span className="text-right">Status</span>
                     </div>
                     <div className="divide-y divide-border">
-                      {filtered.map((bet) => (
-                        <BetRow key={bet.id} bet={bet} currentUserId={user.id} />
+                      {filtered.map((bet, i) => (
+                        <BetRow key={bet.id} bet={bet} currentUserId={user.id} i={i} />
                       ))}
                     </div>
                   </div>

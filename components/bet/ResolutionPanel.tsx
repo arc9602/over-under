@@ -93,11 +93,11 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
       const won = net > 0;
       const broke_even = net === 0;
       return (
-        <Card className={won ? "border-emerald-500/50 bg-emerald-500/5" : broke_even ? "" : "border-destructive/30 bg-destructive/5"}>
+        <Card className={won ? "border-win/50 bg-win/5" : broke_even ? "" : "border-destructive/30 bg-destructive/5"}>
           <CardContent className="p-4 text-center">
             <p
               className={`font-black text-2xl tabular-nums ${
-                broke_even ? "" : won ? "text-emerald-400" : "text-destructive"
+                broke_even ? "" : won ? "text-win" : "text-destructive"
               }`}
             >
               {broke_even
@@ -147,7 +147,7 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
                     >
                       <span className="font-bold text-sm">{sideLabel(side)}</span>
                       {preview.isParticipant && (
-                        <span className={`text-xs ${preview.profit >= 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                        <span className={`text-xs ${preview.profit >= 0 ? "text-win" : "text-muted-foreground"}`}>
                           {preview.profit >= 0
                             ? `You'd net +${formatCurrency(preview.profit)}`
                             : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
@@ -168,7 +168,7 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
                     >
                       <span className="font-bold text-sm truncate max-w-full">{option.label}</span>
                       {preview.isParticipant && (
-                        <span className={`text-xs ${preview.profit >= 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                        <span className={`text-xs ${preview.profit >= 0 ? "text-win" : "text-muted-foreground"}`}>
                           {preview.profit >= 0
                             ? `You'd net +${formatCurrency(preview.profit)}`
                             : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
@@ -196,9 +196,9 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
 
     if (isProposer) {
       return (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-resolving/30 bg-resolving/5">
           <CardContent className="p-4">
-            <p className="text-xs font-black tracking-widest text-amber-400 mb-2">AWAITING CONFIRMATION</p>
+            <p className="text-xs font-black tracking-widest text-resolving mb-2">AWAITING CONFIRMATION</p>
             <p className="text-sm">
               You proposed <span className="font-bold">{label}</span> as the winner.
             </p>
@@ -209,9 +209,9 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
     }
 
     return (
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-resolving/30 bg-resolving/5">
         <CardContent className="p-4">
-          <p className="text-xs font-black tracking-widest text-amber-400 mb-2">RESOLUTION PROPOSED</p>
+          <p className="text-xs font-black tracking-widest text-resolving mb-2">RESOLUTION PROPOSED</p>
           <p className="text-sm mb-4">
             {proposerName} says <span className="font-bold">{label}</span> won. Do you agree?
           </p>

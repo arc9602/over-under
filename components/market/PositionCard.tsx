@@ -23,7 +23,7 @@ function OutcomeRow({ label, profitCents }: { label: string; profitCents: number
       <span className="text-muted-foreground truncate">If {label}</span>
       <span
         className={`font-black tabular-nums ${
-          flat ? "text-muted-foreground" : up ? "text-emerald-400" : "text-destructive"
+          flat ? "text-muted-foreground" : up ? "text-win" : "text-destructive"
         }`}
       >
         {flat
@@ -60,7 +60,7 @@ export function PositionCard({ fills, currentUserId, yesLabel, noLabel }: Positi
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">
               {yesLabel}
             </p>
-            <p className="font-black text-emerald-400">{position.yes}</p>
+            <p className="font-black text-win">{position.yes}</p>
             <p className="text-[10px] text-muted-foreground">
               {position.avgYesPrice != null ? `avg ${formatCents(position.avgYesPrice)}` : "—"}
             </p>
@@ -69,7 +69,7 @@ export function PositionCard({ fills, currentUserId, yesLabel, noLabel }: Positi
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">
               {noLabel}
             </p>
-            <p className="font-black text-rose-400">{position.no}</p>
+            <p className="font-black text-loss">{position.no}</p>
             <p className="text-[10px] text-muted-foreground">
               {position.avgNoPrice != null ? `avg ${formatCents(position.avgNoPrice)}` : "—"}
             </p>

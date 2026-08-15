@@ -57,7 +57,7 @@ export function BetPositionChart({
   const pnlPct = shown && costBasis !== 0 ? (shown.pnl / costBasis) * 100 : 0;
 
   return (
-    <Card className={cn(data.length > 0 && (inProfit ? "bg-emerald-500/5" : "bg-rose-500/5"), className)}>
+    <Card className={cn(data.length > 0 && (inProfit ? "bg-win/5" : "bg-loss/5"), className)}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -69,7 +69,7 @@ export function BetPositionChart({
                 <span
                   className={cn(
                     "text-3xl font-black tabular-nums",
-                    shown.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
+                    shown.pnl >= 0 ? "text-win" : "text-loss"
                   )}
                 >
                   {shown.pnl >= 0 ? "+" : "−"}
@@ -78,7 +78,7 @@ export function BetPositionChart({
                 <span
                   className={cn(
                     "text-xs font-bold tabular-nums",
-                    shown.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
+                    shown.pnl >= 0 ? "text-win" : "text-loss"
                   )}
                 >
                   {shown.pnl >= 0 ? "+" : ""}
@@ -99,7 +99,7 @@ export function BetPositionChart({
         <ProbabilityChart
           points={visible}
           getY={(p) => p.currentOdds}
-          lineColorClassName={inProfit ? "text-emerald-400" : "text-rose-400"}
+          lineColorClassName={inProfit ? "text-win" : "text-loss"}
           referenceY={referenceOdds}
           referenceLabel={referenceOdds != null ? `Avg entry ${formatCents(referenceOdds)}` : undefined}
           onHoverChange={setHovered}
@@ -108,7 +108,7 @@ export function BetPositionChart({
             <div className="space-y-0.5">
               <p className="text-muted-foreground">{formatTooltipTime(p.timestamp)}</p>
               <p className="font-bold tabular-nums">{Math.round(p.currentOdds)}% odds</p>
-              <p className={cn("tabular-nums", p.pnl >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              <p className={cn("tabular-nums", p.pnl >= 0 ? "text-win" : "text-loss")}>
                 {p.pnl >= 0 ? "+" : "−"}
                 {formatCurrency(Math.abs(p.pnl))} · {formatCurrency(p.positionValue)} value
               </p>

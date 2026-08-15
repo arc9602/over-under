@@ -53,7 +53,7 @@ export default async function BalancesPage() {
                 </p>
                 <p
                   className={`text-3xl font-black tabular-nums ${
-                    up ? "text-emerald-400" : "text-rose-400"
+                    up ? "text-win" : "text-loss"
                   }`}
                 >
                   {up ? "+" : "−"}
@@ -68,7 +68,7 @@ export default async function BalancesPage() {
             {history.length > 1 && (
               <Sparkline
                 values={history.map((h) => h.net)}
-                colorClassName={up ? "text-emerald-400" : "text-rose-400"}
+                colorClassName={up ? "text-win" : "text-loss"}
               />
             )}
           </CardContent>
@@ -84,7 +84,7 @@ export default async function BalancesPage() {
               </p>
               <p
                 className={`text-sm font-black tabular-nums ${
-                  outstandingNet >= 0 ? "text-emerald-400" : "text-rose-400"
+                  outstandingNet >= 0 ? "text-win" : "text-loss"
                 }`}
               >
                 {outstandingNet >= 0 ? "+" : "−"}
@@ -97,7 +97,7 @@ export default async function BalancesPage() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Owed to you
                 </p>
-                <p className="text-xl font-black tabular-nums text-emerald-400">
+                <p className="text-xl font-black tabular-nums text-win">
                   {formatCurrency(totalOwed)}
                 </p>
               </div>
@@ -105,7 +105,7 @@ export default async function BalancesPage() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   You owe
                 </p>
-                <p className="text-xl font-black tabular-nums text-rose-400">
+                <p className="text-xl font-black tabular-nums text-loss">
                   {formatCurrency(totalOwing)}
                 </p>
               </div>

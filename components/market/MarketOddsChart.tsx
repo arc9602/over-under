@@ -51,7 +51,7 @@ export function MarketOddsChart({ data, yesLabel, noLabel, className }: MarketOd
               <div className="flex items-baseline gap-2">
                 <span
                   className={`text-3xl font-black tabular-nums ${
-                    shownFavorsYes ? "text-emerald-400" : "text-rose-400"
+                    shownFavorsYes ? "text-win" : "text-loss"
                   }`}
                 >
                   {Math.round(shownFavorsYes ? shown.yesProbability : shown.noProbability)}%
@@ -70,7 +70,7 @@ export function MarketOddsChart({ data, yesLabel, noLabel, className }: MarketOd
         <ProbabilityChart
           points={visible}
           getY={(p) => p.yesProbability}
-          lineColorClassName={lineFavorsYes ? "text-emerald-400" : "text-rose-400"}
+          lineColorClassName={lineFavorsYes ? "text-win" : "text-loss"}
           onHoverChange={setHovered}
           emptyMessage="No trades yet"
           renderTooltip={(p) => (

@@ -79,7 +79,7 @@ export function OrderBook({ orders, yesLabel, noLabel }: OrderBookProps) {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
               Buy {yesLabel}
             </p>
-            <p className="text-xl font-black text-emerald-400">
+            <p className="text-xl font-black text-win">
               {best.yes ? formatCents(best.yes.price) : "—"}
             </p>
             <p className="text-[10px] text-muted-foreground">
@@ -90,7 +90,7 @@ export function OrderBook({ orders, yesLabel, noLabel }: OrderBookProps) {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 truncate">
               Buy {noLabel}
             </p>
-            <p className="text-xl font-black text-rose-400">
+            <p className="text-xl font-black text-loss">
               {best.no ? formatCents(best.no.price) : "—"}
             </p>
             <p className="text-[10px] text-muted-foreground">
@@ -100,8 +100,8 @@ export function OrderBook({ orders, yesLabel, noLabel }: OrderBookProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-4 border-t border-border pt-3">
-          <BookSide label={yesLabel} side="yes" orders={orders} accent="text-emerald-400" />
-          <BookSide label={noLabel} side="no" orders={orders} accent="text-rose-400" />
+          <BookSide label={yesLabel} side="yes" orders={orders} accent="text-win" />
+          <BookSide label={noLabel} side="no" orders={orders} accent="text-loss" />
         </div>
       </CardContent>
     </Card>

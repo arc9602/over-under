@@ -31,7 +31,7 @@ export function MarketCard({ market, currentUserId }: MarketCardProps) {
               <span
                 className={cn(
                   "inline-flex items-center gap-1 text-[10px] font-black tracking-wide shrink-0",
-                  favorsYes ? "text-emerald-400" : "text-rose-400"
+                  favorsYes ? "text-win" : "text-loss"
                 )}
               >
                 {favorsYes ? (
@@ -62,7 +62,7 @@ export function MarketCard({ market, currentUserId }: MarketCardProps) {
                 <p
                   className={cn(
                     "text-sm font-black tabular-nums",
-                    valueCents >= position.costCents ? "text-emerald-400" : "text-rose-400"
+                    valueCents >= position.costCents ? "text-win" : "text-loss"
                   )}
                 >
                   {formatCurrency(centsToDollars(valueCents))}

@@ -36,7 +36,7 @@ export function BalanceCard({ balance }: BalanceCardProps) {
                 <p className="font-bold text-sm truncate">{friendName}</p>
                 <p
                   className={`text-xs font-medium tabular-nums ${
-                    youOwe ? "text-destructive" : "text-emerald-400"
+                    youOwe ? "text-destructive" : "text-win"
                   }`}
                 >
                   {youOwe

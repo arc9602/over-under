@@ -48,7 +48,7 @@ export function BetWagerChart({
   const sideLabel = side === "a" ? sideALabel : side === "b" ? sideBLabel : null;
 
   return (
-    <Card className={cn(data.length > 0 && (inProfit ? "bg-emerald-500/5" : "bg-rose-500/5"), className)}>
+    <Card className={cn(data.length > 0 && (inProfit ? "bg-win/5" : "bg-loss/5"), className)}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -59,7 +59,7 @@ export function BetWagerChart({
               <span
                 className={cn(
                   "text-3xl font-black tabular-nums",
-                  shown.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
+                  shown.pnl >= 0 ? "text-win" : "text-loss"
                 )}
               >
                 {shown.pnl >= 0 ? "+" : "−"}
@@ -81,7 +81,7 @@ export function BetWagerChart({
         <ProbabilityChart
           points={visible}
           getY={(p) => p.currentOdds}
-          lineColorClassName={inProfit ? "text-emerald-400" : "text-rose-400"}
+          lineColorClassName={inProfit ? "text-win" : "text-loss"}
           referenceY={referenceOdds}
           referenceLabel={referenceOdds != null ? `Entry ${referenceOdds}%` : undefined}
           onHoverChange={setHovered}
@@ -90,7 +90,7 @@ export function BetWagerChart({
             <div className="space-y-0.5">
               <p className="text-muted-foreground">{formatTooltipTime(p.timestamp)}</p>
               <p className="font-bold tabular-nums">{Math.round(p.currentOdds)}% pool share</p>
-              <p className={cn("tabular-nums", p.pnl >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              <p className={cn("tabular-nums", p.pnl >= 0 ? "text-win" : "text-loss")}>
                 {p.pnl >= 0 ? "+" : "−"}
                 {formatCurrency(Math.abs(p.pnl))} net
               </p>

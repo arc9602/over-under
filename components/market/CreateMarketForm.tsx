@@ -324,9 +324,9 @@ export function CreateMarketForm() {
             <div className="flex items-center justify-between gap-4 p-3">
               <dt className="text-muted-foreground">Outcomes</dt>
               <dd className="font-medium">
-                <span className="text-emerald-400">{yesLabel.trim()}</span>
+                <span className="text-win">{yesLabel.trim()}</span>
                 {" / "}
-                <span className="text-rose-400">{noLabel.trim()}</span>
+                <span className="text-loss">{noLabel.trim()}</span>
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4 p-3">
