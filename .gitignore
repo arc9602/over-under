@@ -49,3 +49,18 @@ cloudflare-env.d.ts
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# vendored AI-tooling skill bundles.
+#
+# These are third-party content fetched by `npx impeccable install` and
+# `npx skills add`, together about 4MB of markdown and scripts that nobody
+# here edits. skills-lock.json is committed, so a fresh clone can reproduce
+# them exactly; carrying the payload in git history would mean reviewing
+# someone else's vendored files on every update for no benefit.
+#
+# .claude/agents/ is deliberately NOT ignored. It holds ui-builder.md, which
+# is ours: it defines how agents are expected to work in this repo, and it
+# should travel with the repo the way AGENTS.md does.
+.claude/skills/
+.agents/
+.impeccable/hook.cache.json
