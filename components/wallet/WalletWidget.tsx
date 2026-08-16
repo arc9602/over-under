@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 
+import { isUsdcEnabled } from "@/lib/chain/env";
+
 /**
  * The wallet UI, loaded in the browser only.
  *
@@ -23,6 +25,18 @@ const WalletMount = dynamic(() => import("./WalletMount").then((m) => m.WalletMo
   loading: () => <div className="h-7 w-28 animate-pulse rounded bg-secondary" aria-hidden />,
 });
 
+/**
+ * This is the one guard for the whole wallet UI, rather than one inside
+ * WalletButton, WalletMount, DepositModal, etc. -- AppNav is this component's
+ * only caller (see AppNav.tsx), so a single check here already keeps every
+ * wallet component, and the Privy/wagmi dynamic import itself, out of a
+ * disabled deployment: returning null before <WalletMount /> renders means
+ * next/dynamic's import() never fires, so none of that stack even reaches the
+ * browser, not just the button it would have drawn. Scattering the same
+ * check into each wallet component would still load the code and would give
+ * a future component a chance to forget it.
+ */
 export function WalletWidget() {
+  if (!isUsdcEnabled()) return null;
   return <WalletMount />;
 }

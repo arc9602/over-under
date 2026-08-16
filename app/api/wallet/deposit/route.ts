@@ -14,7 +14,12 @@ import {
 } from "@/lib/api/session";
 import { isUniqueViolation, parseJsonBody, translateMoneyError } from "@/lib/api/request";
 import { getPublicClient } from "@/lib/chain/client";
-import { getMinDepositConfirmations, getUsdcAddress, getVaultAddress } from "@/lib/chain/env";
+import {
+  getMinDepositConfirmations,
+  getUsdcAddress,
+  getVaultAddress,
+  isUsdcEnabled,
+} from "@/lib/chain/env";
 import { TRANSFER_TOPIC, usdcAbi } from "@/lib/chain/usdc";
 import { formatUsdc, parseUsdc } from "@/lib/chain/amount";
 import { depositSchema } from "@/lib/validation/wallet";
@@ -35,6 +40,15 @@ import { depositSchema } from "@/lib/validation/wallet";
  */
 export async function POST(request: Request) {
   try {
+    // 404, not 403 -- same reasoning as requireAdminSession in
+    // lib/api/session.ts. Custody is parked pending legal review and off by
+    // default (lib/chain/env.ts); a 403 here would confirm to a prober that
+    // deposits exist on this deployment at all. Checked before even
+    // requireSameOrigin, so the response is identical to a route that was
+    // never built.
+    if (!isUsdcEnabled()) {
+      throw new ApiError(404, "Not found");
+    }
     requireSameOrigin(request);
     const { user } = await requireSession();
     // Each POST here triggers several unauthenticated upstream JSON-RPC calls

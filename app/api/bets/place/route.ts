@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ApiError, apiError, apiOk, requireSameOrigin, requireSession } from "@/lib/api/session";
+import { isUsdcEnabled } from "@/lib/chain/env";
 import { placeOrderForUser } from "@/lib/money/placeOrder";
 import { firstIssue, marketSideSchema, priceSchema, quantitySchema, uuidSchema } from "@/lib/validation/common";
 
@@ -26,6 +27,15 @@ const placeOrderSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // This route escrows USDC before an order can rest or fill, so it is
+    // custody too. Same 404-not-403 guard as the /api/wallet routes -- see
+    // lib/api/session.ts's requireAdminSession for why 404: a 403 would
+    // confirm escrowed betting exists on this deployment. Checked before even
+    // requireSameOrigin, so the response is identical to a route that was
+    // never built.
+    if (!isUsdcEnabled()) {
+      throw new ApiError(404, "Not found");
+    }
     requireSameOrigin(request);
 
     // Identity is established server-side from the session cookie. A user_id in

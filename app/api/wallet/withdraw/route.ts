@@ -13,7 +13,7 @@ import {
 } from "@/lib/api/session";
 import { parseJsonBody, translateMoneyError } from "@/lib/api/request";
 import { getPublicClient, getVaultWalletClient, polygonAmoy } from "@/lib/chain/client";
-import { getUsdcAddress } from "@/lib/chain/env";
+import { getUsdcAddress, isUsdcEnabled } from "@/lib/chain/env";
 import { usdcAbi } from "@/lib/chain/usdc";
 import { formatUsdc, parseUsdc } from "@/lib/chain/amount";
 import { withdrawSchema } from "@/lib/validation/wallet";
@@ -42,6 +42,15 @@ import { withdrawSchema } from "@/lib/validation/wallet";
  */
 export async function POST(request: Request) {
   try {
+    // 404, not 403 -- same reasoning as requireAdminSession in
+    // lib/api/session.ts. Custody is parked pending legal review and off by
+    // default (lib/chain/env.ts); a 403 here would confirm to a prober that
+    // withdrawals exist on this deployment at all. Checked before even
+    // requireSameOrigin, so the response is identical to a route that was
+    // never built.
+    if (!isUsdcEnabled()) {
+      throw new ApiError(404, "Not found");
+    }
     requireSameOrigin(request);
     const { user } = await requireSession();
     await enforceRateLimit(user.id, "wallet_withdraw", 5, 60);

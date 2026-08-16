@@ -13,6 +13,7 @@ import {
   blockText,
 } from "@/lib/validation/common";
 import { ApiError } from "@/lib/api/session";
+import { isUsdcEnabled } from "@/lib/chain/env";
 import { placeOrderForUser } from "@/lib/money/placeOrder";
 
 const createMarketSchema = z
@@ -66,6 +67,16 @@ export async function createMarket(formData: FormData) {
     openingSide, openingPrice, openingQuantity,
   } = parsed.data;
 
+  // CreateMarketForm doesn't render the backing choice while USDC is
+  // disabled, so a `usdc` value reaching here is a crafted request, not a
+  // user choice -- the form has no control that produces it. No error, no
+  // rejection: silently coerce to 'iou'. Migration 016's backing column is
+  // immutable after creation and place_market_order refuses a usdc market
+  // with no escrow lock, so failing open here would just hand that request
+  // straight to a database check that also declines it. Forcing 'iou' is the
+  // safe response, not a workaround for one.
+  const resolvedBacking = isUsdcEnabled() ? backing : "iou";
+
   const { data: market, error } = await supabase
     .from("markets")
     .insert({
@@ -76,7 +87,7 @@ export async function createMarket(formData: FormData) {
       max_contracts: maxContracts ?? null,
       deadline: deadline ? new Date(deadline).toISOString() : null,
       creator_id: user.id,
-      backing,
+      backing: resolvedBacking,
     })
     .select("id")
     .single();

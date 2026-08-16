@@ -12,6 +12,7 @@ import {
   serviceClient,
 } from "@/lib/api/session";
 import { isUniqueViolation, parseJsonBody } from "@/lib/api/request";
+import { isUsdcEnabled } from "@/lib/chain/env";
 import {
   WALLET_LINK_MAX_AGE_MS,
   WALLET_LINK_MAX_SKEW_MS,
@@ -40,6 +41,15 @@ import {
  */
 export async function POST(request: Request) {
   try {
+    // 404, not 403 -- same reasoning as requireAdminSession in
+    // lib/api/session.ts. Custody is parked pending legal review and off by
+    // default (lib/chain/env.ts); a 403 here would confirm to a prober that
+    // wallet linking exists on this deployment at all. Checked before even
+    // requireSameOrigin, so the response is identical to a route that was
+    // never built.
+    if (!isUsdcEnabled()) {
+      throw new ApiError(404, "Not found");
+    }
     requireSameOrigin(request);
     const { user } = await requireSession();
     await enforceRateLimit(user.id, "wallet_link", 10, 60);

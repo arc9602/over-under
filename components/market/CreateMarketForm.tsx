@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Stepper } from "@/components/shared/Stepper";
 import { createMarket } from "@/lib/actions/markets";
+import { isUsdcEnabled } from "@/lib/chain/env";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { CONTRACT_CENTS, centsToDollars, formatCents } from "@/lib/utils/marketBook";
 
@@ -49,7 +50,10 @@ export function CreateMarketForm() {
     formData.set("noLabel", noLabel.trim());
     if (maxContracts) formData.set("maxContracts", maxContracts);
     if (deadline) formData.set("deadline", deadline);
-    formData.set("backing", backing);
+    // Omitted entirely while USDC is off -- createMarket defaults an absent
+    // value to 'iou' via createMarketSchema, and this control isn't rendered
+    // below for the user to have chosen anything else.
+    if (isUsdcEnabled()) formData.set("backing", backing);
     if (seedBook) {
       formData.set("openingSide", openingSide);
       formData.set("openingPrice", String(openingPrice));
@@ -108,47 +112,53 @@ export function CreateMarketForm() {
             />
           </div>
 
-          <div className="space-y-2 rounded-lg border border-border p-3">
-            <p className="text-sm font-medium">How is this market backed?</p>
+          {/* Absent, not disabled, while USDC is off: a greyed-out radio still
+              advertises that custody exists on this deployment, which is the
+              exact confirmation the server-side 404s in the wallet and bets
+              routes are built to withhold. See lib/chain/env.ts. */}
+          {isUsdcEnabled() && (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <p className="text-sm font-medium">How is this market backed?</p>
 
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="backing"
-                value="iou"
-                checked={backing === "iou"}
-                onChange={() => setBacking("iou")}
-                className="accent-primary mt-0.5"
-              />
-              <span>
-                <span className="font-medium">IOU</span>
-                <span className="block text-xs text-muted-foreground">
-                  Track who owes what, no deposit needed.
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="backing"
+                  value="iou"
+                  checked={backing === "iou"}
+                  onChange={() => setBacking("iou")}
+                  className="accent-primary mt-0.5"
+                />
+                <span>
+                  <span className="font-medium">IOU</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Track who owes what, no deposit needed.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
 
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="backing"
-                value="usdc"
-                checked={backing === "usdc"}
-                onChange={() => setBacking("usdc")}
-                className="accent-primary mt-0.5"
-              />
-              <span>
-                <span className="font-medium">USDC</span>
-                <span className="block text-xs text-muted-foreground">
-                  Every order is backed by real funds held in escrow.
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="backing"
+                  value="usdc"
+                  checked={backing === "usdc"}
+                  onChange={() => setBacking("usdc")}
+                  className="accent-primary mt-0.5"
+                />
+                <span>
+                  <span className="font-medium">USDC</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Every order is backed by real funds held in escrow.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
 
-            <p className="text-xs text-muted-foreground">
-              This can&apos;t be changed once the market is created.
-            </p>
-          </div>
+              <p className="text-xs text-muted-foreground">
+                This can&apos;t be changed once the market is created.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -333,10 +343,16 @@ export function CreateMarketForm() {
               <dt className="text-muted-foreground">Max per side</dt>
               <dd className="font-medium">{maxContracts || "No limit"}</dd>
             </div>
-            <div className="flex items-center justify-between gap-4 p-3">
-              <dt className="text-muted-foreground">Backing</dt>
-              <dd className="font-medium">{backing === "usdc" ? "USDC (escrowed)" : "IOU"}</dd>
-            </div>
+            {/* Only worth reviewing when it was a decision. With USDC parked
+                there is no control at step 0 that produces anything but IOU,
+                so a "Backing: IOU" line here reads as a setting the user
+                chose and might change -- it is neither. */}
+            {isUsdcEnabled() && (
+              <div className="flex items-center justify-between gap-4 p-3">
+                <dt className="text-muted-foreground">Backing</dt>
+                <dd className="font-medium">{backing === "usdc" ? "USDC (escrowed)" : "IOU"}</dd>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-4 p-3">
               <dt className="text-muted-foreground">Deadline</dt>
               <dd className="font-medium">

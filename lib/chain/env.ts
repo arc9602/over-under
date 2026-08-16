@@ -91,6 +91,22 @@ export function getPublicRpcUrl(): string {
   return process.env.NEXT_PUBLIC_RPC_URL?.trim() || "https://rpc-amoy.polygon.technology";
 }
 
+/**
+ * Whether the USDC custody path -- wallet linking, deposits, withdrawals, and
+ * USDC-backed markets -- is switchable on at all. The IOU ledger custodies
+ * nothing and ships regardless of this flag; the vault does, and the founder
+ * is launching IOU-only while custody waits on legal review.
+ *
+ * Defaults OFF, and that default is fail-closed on purpose: this is read as
+ * `=== "1"` rather than "anything truthy", so unset, empty, "true", or a typo
+ * all mean disabled. A flag that defaulted on would mean a fresh deploy, or a
+ * CI environment with no env var set at all, silently re-enables real-money
+ * custody with no one having decided that.
+ */
+export function isUsdcEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_USDC === "1";
+}
+
 // ============================================================
 // Server-only below this line.
 //
