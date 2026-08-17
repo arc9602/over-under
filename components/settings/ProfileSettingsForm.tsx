@@ -58,6 +58,23 @@ export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
         />
       </div>
 
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+          <input
+            type="checkbox"
+            name="discoverableByEmail"
+            defaultChecked={profile.discoverable_by_email}
+            className="accent-primary"
+          />
+          Let people find me by email
+        </label>
+        <p className="text-xs text-muted-foreground">
+          When this is on, anyone who already knows your email address can
+          find your account and send you a friend request. Turning it off
+          means people can only find you by your username.
+        </p>
+      </div>
+
       <Button type="submit" className="w-full font-bold" disabled={isPending}>
         {isPending ? "Saving…" : "Save Changes"}
       </Button>

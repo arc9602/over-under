@@ -16,6 +16,7 @@ export type Database = {
           display_name: string | null;
           avatar_url: string | null;
           created_at: string;
+          discoverable_by_email: boolean;
         };
         Insert: {
           id: string;
@@ -23,6 +24,7 @@ export type Database = {
           display_name?: string | null;
           avatar_url?: string | null;
           created_at?: string;
+          discoverable_by_email?: boolean;
         };
         Update: {
           id?: string;
@@ -30,6 +32,7 @@ export type Database = {
           display_name?: string | null;
           avatar_url?: string | null;
           created_at?: string;
+          discoverable_by_email?: boolean;
         };
         Relationships: [];
       };
@@ -1245,6 +1248,26 @@ export type Database = {
       simplify_debt_cycles: {
         Args: { p_user_id: string; p_reductions: Json };
         Returns: Database["public"]["Tables"]["debt_simplifications"]["Row"];
+      };
+      // Migration 021. Both revoked from `authenticated` -- reachable only
+      // through the service client -- and never return an email, by design.
+      find_profile_by_email: {
+        Args: { p_user_id: string; p_email: string };
+        Returns: {
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+        }[];
+      };
+      search_profiles_by_username: {
+        Args: { p_user_id: string; p_prefix: string };
+        Returns: {
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+        }[];
       };
     };
     Enums: { [_ in never]: never };

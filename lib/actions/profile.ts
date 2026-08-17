@@ -18,6 +18,10 @@ const updateProfileSchema = z.object({
     .max(20)
     .regex(/^[a-z0-9_]+$/, "Lowercase letters, numbers, and underscores only"),
   displayName: lineText(1, 50),
+  // A checkbox's FormData entry is "on" when checked and absent (null) when
+  // not -- there's no unchecked value to read. preprocess turns both of
+  // those into a real boolean before the schema sees them.
+  discoverableByEmail: z.preprocess((v) => v === "on", z.boolean()),
 });
 
 export async function updateProfile(formData: FormData) {
@@ -28,17 +32,26 @@ export async function updateProfile(formData: FormData) {
   const parsed = updateProfileSchema.safeParse({
     username: formData.get("username"),
     displayName: formData.get("displayName"),
+    discoverableByEmail: formData.get("discoverableByEmail"),
   });
 
   if (!parsed.success) {
     return { error: "Invalid form data", details: parsed.error.flatten() };
   }
 
-  const { username, displayName } = parsed.data;
+  const { username, displayName, discoverableByEmail } = parsed.data;
 
+  // Only discoverable_by_email is grantable beyond the three columns 017
+  // already opened up (username, display_name are two of those three) --
+  // migration 021 grants UPDATE on it specifically. Any other new column
+  // added to this object will save nothing until a migration grants it too.
   const { error } = await supabase
     .from("profiles")
-    .update({ username, display_name: displayName })
+    .update({
+      username,
+      display_name: displayName,
+      discoverable_by_email: discoverableByEmail,
+    })
     .eq("id", user.id);
 
   if (error) {

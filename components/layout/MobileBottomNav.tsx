@@ -9,6 +9,8 @@ export function MobileBottomNav() {
   const links = [
     {
       href: "/dashboard",
+      // Bets also live at /bets/<id> -- match both prefixes so browsing a bet keeps this tab lit.
+      matchPrefixes: ["/dashboard", "/bets"],
       label: "Bets",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -18,17 +20,8 @@ export function MobileBottomNav() {
       ),
     },
     {
-      href: "/friends",
-      label: "Friends",
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H2v-2a4 4 0 014-4h3m8-4a3 3 0 100-6 3 3 0 000 6zM9 12a4 4 0 100-8 4 4 0 000 8zm6 8v-2a6 6 0 00-12 0v2" />
-        </svg>
-      ),
-    },
-    {
       href: "/markets",
+      matchPrefixes: ["/markets"],
       label: "Markets",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -39,6 +32,8 @@ export function MobileBottomNav() {
     },
     {
       href: "/new",
+      // Exact match, not prefix -- otherwise this tab would stay lit on /bets/new and /markets/new.
+      exact: true,
       label: "New",
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,10 +41,23 @@ export function MobileBottomNav() {
             d="M12 4v16m8-8H4" />
         </svg>
       ),
+      // Centre slot of five is the thumb-reachable spot for a primary action.
       primary: true,
     },
     {
+      href: "/friends",
+      matchPrefixes: ["/friends"],
+      label: "Friends",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H2v-2a4 4 0 014-4h3m8-4a3 3 0 100-6 3 3 0 000 6zM9 12a4 4 0 100-8 4 4 0 000 8zm6 8v-2a6 6 0 00-12 0v2" />
+        </svg>
+      ),
+    },
+    {
       href: "/balances",
+      matchPrefixes: ["/balances"],
       label: "Portfolio",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,7 +75,9 @@ export function MobileBottomNav() {
     >
       <div className="flex">
         {links.map((link) => {
-          const active = pathname.startsWith(link.href);
+          const active = link.exact
+            ? pathname === link.href
+            : (link.matchPrefixes?.some((prefix) => pathname.startsWith(prefix)) ?? false);
           return (
             <Link
               key={link.href}
