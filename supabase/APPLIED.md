@@ -50,3 +50,4 @@ Do not tick a line before running the SQL. The whole value of the file is that i
 - 016_market_backing.sql
 - 017_direct_write_hardening.sql
 - 018_delete_bet.sql
+- 019_debt_cycle_simplification.sql

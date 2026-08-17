@@ -588,6 +588,10 @@ export type Database = {
           settled: boolean;
           settled_at: string | null;
           created_at: string;
+          // Migration 017. Set on rows cancelled by simplify_debt_cycles, and
+          // on the remainder rows it creates -- null for every row settled
+          // by an actual payment.
+          simplification_id: string | null;
         };
         Insert: {
           id?: string;
@@ -599,6 +603,7 @@ export type Database = {
           settled?: boolean;
           settled_at?: string | null;
           created_at?: string;
+          simplification_id?: string | null;
         };
         Update: {
           id?: string;
@@ -610,6 +615,7 @@ export type Database = {
           settled?: boolean;
           settled_at?: string | null;
           created_at?: string;
+          simplification_id?: string | null;
         };
         Relationships: [
           {
@@ -984,6 +990,44 @@ export type Database = {
           }
         ];
       };
+      debt_simplifications: {
+        Row: {
+          id: string;
+          initiated_by: string;
+          pairs_reduced: number;
+          cents_cancelled: number;
+          rows_settled: number;
+          rows_split: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          initiated_by: string;
+          pairs_reduced?: number;
+          cents_cancelled?: number;
+          rows_settled?: number;
+          rows_split?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          initiated_by?: string;
+          pairs_reduced?: number;
+          cents_cancelled?: number;
+          rows_settled?: number;
+          rows_split?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "debt_simplifications_initiated_by_fkey";
+            columns: ["initiated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -1194,6 +1238,13 @@ export type Database = {
       revert_usdc_withdrawal: {
         Args: { p_withdrawal_id: string; p_reason?: string | null };
         Returns: undefined;
+      };
+      // Migration 017. p_reductions is [{debtor, creditor, cents}, ...] --
+      // the JSONB shape lib/utils/simplifyDebts.ts's reductions are mapped
+      // into, not the camelCase DebtEdge fields that module exports.
+      simplify_debt_cycles: {
+        Args: { p_user_id: string; p_reductions: Json };
+        Returns: Database["public"]["Tables"]["debt_simplifications"]["Row"];
       };
     };
     Enums: { [_ in never]: never };

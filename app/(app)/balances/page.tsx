@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getNetBalancesForUser, getIouLedger } from "@/lib/queries/balances";
 import { BalanceCard } from "@/components/balances/BalanceCard";
+import { SimplifyDebtsCard } from "@/components/balances/SimplifyDebtsCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SplitBar } from "@/components/shared/SplitBar";
 import { Sparkline } from "@/components/charts/Sparkline";
@@ -117,6 +118,15 @@ export default async function BalancesPage() {
           </div>
         </div>
       )}
+
+      {/* previewSimplification used to run here on every render -- it reads
+          the entire application's unsettled iou_ledger through the service
+          client and runs whole-graph cycle detection, for every user, on
+          every page view. That's a full table scan plus a graph search per
+          request, not per user action. The card now triggers it itself from
+          a click, which is both a far rarer event than "loaded /balances"
+          and the only case that actually needs the answer. */}
+      <SimplifyDebtsCard />
 
       {balances.length === 0 ? (
         <EmptyState
