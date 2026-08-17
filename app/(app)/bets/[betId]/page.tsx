@@ -4,6 +4,7 @@ import { getBetById } from "@/lib/queries/bets";
 import { getNetIouForBet } from "@/lib/queries/balances";
 import { getFriendsForUser } from "@/lib/queries/friends";
 import { getSentBetInviteeIds } from "@/lib/queries/invites";
+import { LiveUpdates } from "@/components/shared/LiveUpdates";
 import { BetDetail } from "@/components/bet/BetDetail";
 import { ResolutionPanel } from "@/components/bet/ResolutionPanel";
 import { InviteSharePanel } from "@/components/bet/InviteSharePanel";
@@ -136,6 +137,8 @@ export default async function BetDetailPage({ params }: Props) {
           </Button>
         </form>
       )}
+
+      <LiveUpdates topic={`bet:${betId}`} />
     </div>
   );
 }

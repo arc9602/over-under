@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getMarketById } from "@/lib/queries/markets";
 import { getNetIouForMarket } from "@/lib/queries/balances";
+import { LiveUpdates } from "@/components/shared/LiveUpdates";
 import { MarketDetail } from "@/components/market/MarketDetail";
 import { MarketResolutionPanel } from "@/components/market/MarketResolutionPanel";
 import { MyOrdersList } from "@/components/market/MyOrdersList";
@@ -138,6 +139,8 @@ export default async function MarketDetailPage({ params }: Props) {
           )}
         </div>
       )}
+
+      <LiveUpdates topic={`market:${marketId}`} />
     </div>
   );
 }

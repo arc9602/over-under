@@ -59,7 +59,8 @@ export async function getProductMetrics(): Promise<ProductMetrics> {
     { count: totalUsers, error: totalUsersError },
     { count: totalBets, error: totalBetsError },
     { data: recentProfiles, error: profilesError },
-    { data: participants, error: participantsError },
+    { data: allParticipants, error: allParticipantsError },
+    { data: recentParticipants, error: recentParticipantsError },
     { data: ious, error: iousError },
   ] = await Promise.all([
     db.from("profiles").select("*", { count: "exact", head: true }),
@@ -70,17 +71,32 @@ export async function getProductMetrics(): Promise<ProductMetrics> {
       .select("created_at")
       .gte("created_at", oldestWeekStart.toISOString()),
     // usersWithABet / usersWithTwoPlusBets are lifetime signals, not windowed
-    // ones -- no date filter here. Per the plan: Supabase's client can't
-    // express GROUP BY date_trunc, and the row counts pre-launch are small
-    // enough that pulling every row and aggregating in TS beats a migration.
-    db.from("bet_participants").select("user_id, joined_at"),
+    // ones, so this one stays unbounded -- user_id only, though, since
+    // joined_at is never read off it and there's no reason to ship a column
+    // this query doesn't use.
+    db.from("bet_participants").select("user_id"),
+    // activeBettors, unlike the counts above, is windowed to the same 12
+    // weeks `weekly` displays -- a second, bounded query rather than
+    // filtering the one above, since that one has to stay lifetime. Reuses
+    // oldestWeekStart rather than recomputing it so the fetch boundary and
+    // the bucketing boundary can't drift apart.
+    db
+      .from("bet_participants")
+      .select("user_id, joined_at")
+      .gte("joined_at", oldestWeekStart.toISOString()),
+    // Unlike bet_participants above, these totals are genuinely all-time --
+    // "outstanding IOU volume" on the admin dashboard means every unsettled
+    // cent in the system, not just the last 12 weeks of it, so there's no
+    // cutoff to apply without changing what the number means. Pre-launch row
+    // counts keep this cheap; revisit if that stops being true.
     db.from("iou_ledger").select("amount, settled"),
   ]);
 
   if (totalUsersError) throw totalUsersError;
   if (totalBetsError) throw totalBetsError;
   if (profilesError) throw profilesError;
-  if (participantsError) throw participantsError;
+  if (allParticipantsError) throw allParticipantsError;
+  if (recentParticipantsError) throw recentParticipantsError;
   if (iousError) throw iousError;
 
   // weekStart epoch ms -> index in `weekly`, so each row bucket-matches in
@@ -106,14 +122,16 @@ export async function getProductMetrics(): Promise<ProductMetrics> {
   // counts once -- activeBettors is "distinct users who did the core
   // action," not "how many bets were joined."
   const activeBettorSets: Set<string>[] = weekStarts.map(() => new Set());
-  const betCountByUser = new Map<string, number>();
-
-  for (const row of participants ?? []) {
-    betCountByUser.set(row.user_id, (betCountByUser.get(row.user_id) ?? 0) + 1);
+  for (const row of recentParticipants ?? []) {
     const idx = weekIndex.get(startOfUtcWeek(new Date(row.joined_at)).getTime());
     if (idx !== undefined) activeBettorSets[idx].add(row.user_id);
   }
   weekly.forEach((w, i) => (w.activeBettors = activeBettorSets[i].size));
+
+  const betCountByUser = new Map<string, number>();
+  for (const row of allParticipants ?? []) {
+    betCountByUser.set(row.user_id, (betCountByUser.get(row.user_id) ?? 0) + 1);
+  }
 
   let usersWithABet = 0;
   let usersWithTwoPlusBets = 0;
