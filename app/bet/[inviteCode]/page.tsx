@@ -6,10 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BetStatusBadge } from "@/components/bet/BetStatusBadge";
 import { CountdownTimer } from "@/components/bet/CountdownTimer";
 import { BetInviteWager } from "@/components/bet/BetInviteWager";
+import { SplitBar } from "@/components/shared/SplitBar";
 import type { SideChoiceOption } from "@/components/bet/SideChoice";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getSideTotals, getBetOptions, getOptionTotals } from "@/lib/utils/betPool";
 import type { BetParticipant, Profile } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface Props {
   params: Promise<{ inviteCode: string }>;
@@ -21,17 +23,16 @@ export default async function InviteLandingPage({ params }: Props) {
 
   if (!bet) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <p className="text-2xl font-bold">Bet not found</p>
-          <p className="text-muted-foreground text-sm mt-2">This invite link may have expired or is invalid.</p>
-          {/* "/" works for a visitor in either auth state: it bounces a signed-in
-              user straight to /dashboard and shows the landing page to everyone
-              else, so a signed-out visitor with no account isn't left with
-              nowhere to go. */}
-          <Link href="/" className="text-primary text-sm mt-4 inline-block hover:underline">
-            Go to Over/Under
-          </Link>
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-sm text-center space-y-4">
+          <p className="text-sm font-black tracking-tight text-primary">OVER/UNDER</p>
+          <div>
+            <p className="text-xl font-black leading-tight">Bet not found</p>
+            <p className="text-muted-foreground text-sm mt-2">This invite link may have expired or is invalid.</p>
+            <Link href="/" className="text-primary text-sm mt-4 inline-block hover:underline">
+              Go to Over/Under →
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -100,6 +101,10 @@ export default async function InviteLandingPage({ params }: Props) {
       ? "This bet is locked and no longer accepting wagers."
       : `This bet is ${bet.status} and no longer accepting wagers.`;
 
+  const totalPoolAmount = sideChoiceOptions.reduce((sum, o) => sum + o.total, 0);
+  const leftSide = sideChoiceOptions[0];
+  const rightSide = sideChoiceOptions[1];
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm space-y-6">
@@ -108,10 +113,13 @@ export default async function InviteLandingPage({ params }: Props) {
         {/* The proposition is the page: bet.title is the largest, heaviest
             text here on purpose -- everything else (who proposed it, the
             pool, the sign-in) is scaffolding around this one claim. */}
-        <Card className="border-primary/30">
-          <CardContent className="p-5 space-y-3">
+        <Card className={cn(
+          "border-primary/30 shadow-2xl shadow-black/40",
+          "bg-gradient-to-b from-primary/5 to-card"
+        )}>
+          <CardContent className="p-5 space-y-4">
             <div className="flex items-start justify-between gap-3">
-              <h1 className="text-2xl font-black leading-tight">{bet.title}</h1>
+              <h1 className="text-[27px] font-black leading-tight tracking-tight">{bet.title}</h1>
               <BetStatusBadge status={bet.status} />
             </div>
 
@@ -124,12 +132,30 @@ export default async function InviteLandingPage({ params }: Props) {
               {bet.deadline && <CountdownTimer deadline={bet.deadline} />}
             </div>
 
-            {(totalPool > 0 || limits) && (
-              <p className="text-xs text-muted-foreground">
-                {totalPool > 0 ? `${formatCurrency(totalPool)} wagered so far` : null}
-                {totalPool > 0 && limits ? " · " : null}
-                {limits}
-              </p>
+            <div className="flex items-baseline justify-between gap-3 pt-1">
+              <div>
+                <span className="font-mono font-semibold text-lg">{formatCurrency(totalPoolAmount)}</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  in the pool · {sideChoiceOptions.reduce((sum, o) => sum + o.count, 0)} in
+                </span>
+              </div>
+              {limits && <p className="text-xs text-muted-foreground">{limits}</p>}
+            </div>
+
+            {isTwoOption && leftSide && rightSide && (
+              <div className="space-y-2 pt-2">
+                <SplitBar
+                  leftValue={leftSide.total}
+                  rightValue={rightSide.total}
+                  leftColorClassName="bg-win"
+                  rightColorClassName="bg-loss"
+                  className="h-2"
+                />
+                <div className="flex items-baseline justify-between text-xs text-muted-foreground">
+                  <span>{leftSide.label}</span>
+                  <span>{rightSide.label}</span>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -147,22 +173,10 @@ export default async function InviteLandingPage({ params }: Props) {
           />
         ) : (
           <div className="space-y-4">
-            {/* Someone who followed a link deserves to see what happened, even
-                once it's too late to join. */}
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-2">
-              {sideChoiceOptions.map((o) => (
-                <div key={o.id} className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="truncate text-sm font-bold leading-tight">{o.label}</p>
-                  <p className="text-xs font-bold tabular-nums text-foreground">
-                    {o.count > 0 ? formatCurrency(o.total) : "No one yet"}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div className="text-center space-y-2">
+            <div className="rounded-lg bg-secondary/30 border border-border p-5 text-center">
               <p className="text-sm text-muted-foreground">{closedReason}</p>
-              <Link href="/" className="text-primary text-sm inline-block hover:underline">
-                {user ? "Back to dashboard" : "Go to Over/Under"}
+              <Link href="/" className="text-primary text-sm inline-block hover:underline mt-3">
+                {user ? "Back to dashboard" : "Go to Over/Under →"}
               </Link>
             </div>
           </div>
