@@ -43,6 +43,26 @@ export async function updateSession(request: NextRequest) {
     return response;
   };
 
+  const pathname = request.nextUrl.pathname;
+
+  // The OAuth callback owns the auth cookies for its own request, alone.
+  //
+  // It is the one route where the incoming cookies are mid-transition: the
+  // old session (if any) is on its way out and the one being minted from the
+  // `code` param is on its way in. Running the refresh below as well puts two
+  // Supabase clients on the same cookie jar in a single request -- this one
+  // computing deletions from the OLD state while the route handler writes the
+  // NEW one -- and both sets of Set-Cookie headers land on the same response.
+  // The browser then resolves a delete and a write of the same cookie name by
+  // header order, which is not a thing to leave to chance for the header that
+  // IS the session. Bail out before the client is built; the route handler
+  // does the whole job correctly on its own.
+  if (pathname === "/api/auth/callback") {
+    return secure(
+      NextResponse.next({ request: { headers: withNonce(request.headers) } })
+    );
+  }
+
   let supabaseResponse = NextResponse.next({
     request: { headers: withNonce(request.headers) },
   });
@@ -78,7 +98,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
   // Note the trailing "s" on "/markets": these are startsWith checks, and
   // "/market" would also gate the public invite landing at /market/<code>.
   const protectedPaths = ["/dashboard", "/bets", "/markets", "/balances", "/settings"];
@@ -88,10 +107,35 @@ export async function updateSession(request: NextRequest) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirect", pathname);
+
+    const redirectResponse = NextResponse.redirect(loginUrl);
+
+    // The cookies are the point of this copy, not a tidiness nicety.
+    //
+    // Reaching here with no user usually means getUser() just tried to refresh
+    // an expired session and failed, and Supabase's response to that is to
+    // expire the auth cookies via setAll() -- onto supabaseResponse, which
+    // this branch is about to throw away. Returning a bare redirect drops
+    // those Set-Cookie headers and leaves the dead session sitting in the
+    // browser.
+    //
+    // That is what made sign-in take two clicks. The stale cookie survived the
+    // bounce to /login and was still attached when the user pressed "Continue
+    // with Google", so it rode along to /api/auth/callback and to the browser
+    // client that mints the PKCE verifier -- and a Supabase client that fails
+    // to recover a session clears that verifier along with the session it
+    // gave up on. No verifier, no code exchange: the callback bounced them
+    // straight back to /login. The second click worked because by then the
+    // dead cookie had finally been cleared by a response that kept its
+    // headers.
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      redirectResponse.cookies.set(cookie);
+    }
+
     // Headers apply here too. next.config.ts's headers() never runs for a
     // response middleware returns itself, so an unauthenticated redirect
     // would otherwise be the one hop with no HSTS on it.
-    return secure(NextResponse.redirect(loginUrl));
+    return secure(redirectResponse);
   }
 
   return secure(supabaseResponse);
