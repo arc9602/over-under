@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isAuthServiceUnavailable } from "@/lib/supabase/authError";
 import { getOrCreateProfile } from "@/lib/queries/profiles";
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -12,7 +13,16 @@ export default async function AppLayout({
   const supabase = await createClient();
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
+
+  // An auth server we could not reach is not a logout, and must not be
+  // answered with one. This throws to app/error.tsx, where retrying costs a
+  // click and the session survives -- rather than redirecting to /login, which
+  // asks the user to re-authenticate a session that is still perfectly valid
+  // and cannot fix anything. getUser() returns user: null for both cases; the
+  // error beside it is the only thing that tells them apart.
+  if (isAuthServiceUnavailable(error)) throw error;
 
   if (!user) redirect("/login");
 

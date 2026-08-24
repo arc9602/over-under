@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database.types";
+import { isAuthServiceUnavailable } from "@/lib/supabase/authError";
 import {
   STATIC_SECURITY_HEADERS,
   buildCsp,
@@ -94,14 +95,30 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // The error is read, not discarded. getUser() reports "not signed in" and
+  // "could not tell you" the same way -- user: null -- and only this error
+  // distinguishes them. See isAuthServiceUnavailable.
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
   // Note the trailing "s" on "/markets": these are startsWith checks, and
   // "/market" would also gate the public invite landing at /market/<code>.
   const protectedPaths = ["/dashboard", "/bets", "/markets", "/balances", "/settings"];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+
+  // Fail open on an infrastructure fault, closed on an authentication one.
+  //
+  // getUser() is a network round-trip to Supabase on all but static assets, so
+  // every rate limit, 5xx and dropped connection between this Worker and the
+  // auth server used to read as "signed out" and bounce the user to /login --
+  // holding a valid session the whole time. This is not a hole: the page they
+  // continue to still runs its own check in app/(app)/layout.tsx, so a request
+  // that genuinely has no session is stopped there rather than here.
+  if (!user && isProtected && isAuthServiceUnavailable(error)) {
+    return secure(supabaseResponse);
+  }
 
   if (!user && isProtected) {
     const loginUrl = request.nextUrl.clone();
