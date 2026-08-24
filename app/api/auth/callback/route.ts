@@ -12,11 +12,45 @@ export async function GET(request: Request) {
     searchParams.get("redirect") ?? cookieStore.get("oauth_redirect")?.value
   );
 
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
-  }
+  /**
+   * The bounce back to /login, keeping the destination the user was heading for.
+   *
+   * Both failure paths used to redirect to a bare
+   * /login?error=auth_callback_failed. LoginForm reads its redirect target
+   * straight off the URL (LoginForm.tsx:12), so the deep link that started the
+   * whole flow was gone by the time the user saw the retry button -- and even a
+   * second attempt that worked dropped them on /dashboard instead of the invite
+   * or market they had followed. The oauth_redirect cookie could not rescue it,
+   * because this handler clears that cookie on its way out.
+   *
+   * Returning a response other than the one the Supabase client wrote cookies
+   * onto is safe here, which is worth stating because the sibling rule in
+   * lib/supabase/middleware.ts is the opposite. Route handlers get a merge that
+   * middleware does not: next/dist/server/route-modules/app-route/module.js
+   * ("It's possible cookies were set in the handler, so we need to merge the
+   * modified cookies and the returned response here") reattaches every
+   * cookieStore mutation onto whatever response the handler returns. setAll
+   * below writes through cookieStore as well as onto `response`, so the
+   * framework carries those writes across regardless of which object comes back.
+   */
+  const failure = () => {
+    const url = new URL(`${origin}/login`);
+    url.searchParams.set("error", "auth_callback_failed");
+    if (redirect !== "/dashboard") {
+      url.searchParams.set("redirect", redirect);
+    }
 
-  let response = NextResponse.redirect(`${origin}${redirect}`);
+    const failed = NextResponse.redirect(url);
+    // Cleared on this path too. Failure used to return without touching it,
+    // leaving a stale target in the browser for the rest of its 600s max-age,
+    // to be picked up by whatever reached this route next.
+    failed.cookies.delete("oauth_redirect");
+    return failed;
+  };
+
+  if (!code) return failure();
+
+  const response = NextResponse.redirect(`${origin}${redirect}`);
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,9 +71,7 @@ export async function GET(request: Request) {
   );
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
-    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
-  }
+  if (error) return failure();
 
   response.cookies.delete("oauth_redirect");
   return response;
