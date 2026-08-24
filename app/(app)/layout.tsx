@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOrCreateProfile } from "@/lib/queries/profiles";
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
-import type { Profile } from "@/lib/types";
 
 export default async function AppLayout({
   children,
@@ -16,13 +16,12 @@ export default async function AppLayout({
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) redirect("/login");
+  // Missing profile used to redirect here too, which was the bug: /login has
+  // no idea the visitor is already signed in, so it offers the one action that
+  // cannot help -- signing in again -- and the next render lands right back
+  // here. getOrCreateProfile provisions the row instead, and lets a genuine
+  // read failure surface as an error rather than as a silent logout.
+  const profile = await getOrCreateProfile(user);
 
   // No wallet provider here. It used to wrap this whole tree, which put
   // @privy-io/react-auth (and transitively @reown/appkit and @metamask/sdk)
@@ -32,7 +31,7 @@ export default async function AppLayout({
   // subtree that consumes wallet context and loaded browser-side only.
   return (
     <div className="min-h-screen flex flex-col">
-      <AppNav profile={profile as Profile} />
+      <AppNav profile={profile} />
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 pb-20 lg:pb-6">
         {children}
       </main>
