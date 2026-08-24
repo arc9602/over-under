@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database.types";
-import { isAuthServiceUnavailable } from "@/lib/supabase/authError";
+import {
+  getUserRetrying,
+  isAuthServiceUnavailable,
+} from "@/lib/supabase/authError";
 import {
   STATIC_SECURITY_HEADERS,
   buildCsp,
@@ -101,7 +104,7 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await getUserRetrying(() => supabase.auth.getUser());
 
   // Note the trailing "s" on "/markets": these are startsWith checks, and
   // "/market" would also gate the public invite landing at /market/<code>.

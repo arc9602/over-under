@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Dices, Link2, CircleCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getUserRetrying } from "@/lib/supabase/authError";
 import { buttonVariants } from "@/components/ui/button";
 import { BetStatusBadge } from "@/components/bet/BetStatusBadge";
 import { SplitBar } from "@/components/shared/SplitBar";
@@ -40,9 +41,18 @@ const POOL_SNAPSHOTS = [
 
 export default async function LandingPage() {
   const supabase = await createClient();
+
+  // Retried, because getting this wrong shows a signed-in user the marketing
+  // page for an app they already have an account on -- which reads as being
+  // silently logged out, and was exactly the symptom on the first open after
+  // a deploy. This page cannot throw on an auth failure the way the app
+  // layout does: it is the public homepage, and it has to stay up for
+  // visitors who are not signed in at all. So it retries instead, and falls
+  // back to rendering the landing page, which is the right answer for
+  // everyone except the case the retry just made much rarer.
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUserRetrying(() => supabase.auth.getUser());
 
   if (user) redirect("/dashboard");
 

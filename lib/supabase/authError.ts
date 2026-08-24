@@ -39,3 +39,29 @@ export function isAuthServiceUnavailable(
     status === undefined || status === 0 || status === 429 || status >= 500
   );
 }
+
+/**
+ * getUser(), retried once when the failure was the auth service rather than
+ * the user.
+ *
+ * The first request to a freshly deployed Worker runs on a cold isolate, with
+ * no warm connection to Supabase, and getUser() is a live network call on
+ * every request that reaches it. That first call is the one that times out --
+ * which is why the symptom is "open the app right after a deploy and it acts
+ * like you are signed out, open it again and it is fine". Cloudflare deploys
+ * on every push, so every deploy handed this to whoever arrived first.
+ *
+ * One retry, not a loop: a cold connection succeeds on the second attempt or
+ * the service is genuinely down, and a signed-out user must not wait through a
+ * retry budget to be told what the first call already established. Callers
+ * still get the error when the retry fails, and still decide what it means --
+ * this only stops a cold start being mistaken for a verdict.
+ */
+export async function getUserRetrying<T extends { error: AuthError | null }>(
+  getUser: () => Promise<T>
+): Promise<T> {
+  const first = await getUser();
+  if (!isAuthServiceUnavailable(first.error)) return first;
+
+  return await getUser();
+}

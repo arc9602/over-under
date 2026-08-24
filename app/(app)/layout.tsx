@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isAuthServiceUnavailable } from "@/lib/supabase/authError";
+import {
+  getUserRetrying,
+  isAuthServiceUnavailable,
+} from "@/lib/supabase/authError";
 import { getOrCreateProfile } from "@/lib/queries/profiles";
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -14,7 +17,7 @@ export default async function AppLayout({
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await getUserRetrying(() => supabase.auth.getUser());
 
   // An auth server we could not reach is not a logout, and must not be
   // answered with one. This throws to app/error.tsx, where retrying costs a
