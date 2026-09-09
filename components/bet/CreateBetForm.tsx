@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Stepper } from "@/components/shared/Stepper";
+import {
+  MONEY_UNIT,
+  STAKE_UNIT_PRESETS,
+  formatStake,
+  pluralizeUnit,
+  unitLabel,
+} from "@/lib/utils/formatStake";
 import { createBet, createBetWithOptions } from "@/lib/actions/bets";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 
@@ -37,6 +44,13 @@ export function CreateBetForm() {
   const [minWager, setMinWager] = useState("");
   const [maxWager, setMaxWager] = useState("");
   const [deadline, setDeadline] = useState("");
+  // A bet can be staked in money or in anything else -- a slice of pizza, a
+  // beer (migration 022). The unit follows the bet through payouts into the
+  // ledger, and settles separately from money on /balances.
+  const [stakeMode, setStakeMode] = useState<"money" | "custom">("money");
+  const [unit, setUnit] = useState("");
+  const [unitPlural, setUnitPlural] = useState("");
+  const [showPluralOverride, setShowPluralOverride] = useState(false);
   const [wagerNow, setWagerNow] = useState(false);
   const [creatorSide, setCreatorSide] = useState<"a" | "b">("a");
   const [creatorAmount, setCreatorAmount] = useState("");
@@ -48,7 +62,16 @@ export function CreateBetForm() {
     trimmedOptions.every((o) => o.length > 0) &&
     new Set(trimmedOptions.map((o) => o.toLowerCase())).size === trimmedOptions.length;
   const wagerValid = !wagerNow || !isTwoOption || Number(creatorAmount) > 0;
-  const canAdvance = step === 0 ? titleValid : step === 1 ? labelsValid : wagerValid;
+  const isMoney = stakeMode === "money";
+  const effectiveUnit = isMoney ? MONEY_UNIT : unit.trim();
+  const effectivePlural = isMoney ? null : unitPlural.trim() || null;
+  const unitReady = isMoney || effectiveUnit.length > 0;
+  const autoPlural = !isMoney && effectiveUnit ? pluralizeUnit(effectiveUnit) : "";
+  // What one wager is called, for the field labels on this step.
+  const wagerNoun = isMoney ? "wager" : unitLabel(effectiveUnit || "unit", effectivePlural);
+
+  const canAdvance =
+    step === 0 ? titleValid : step === 1 ? labelsValid : wagerValid && unitReady;
 
   function updateOption(index: number, value: string) {
     setOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
@@ -73,6 +96,8 @@ export function CreateBetForm() {
       if (minWager) formData.set("minWager", minWager);
       if (maxWager) formData.set("maxWager", maxWager);
       if (deadline) formData.set("deadline", deadline);
+      formData.set("stakeUnit", effectiveUnit || MONEY_UNIT);
+      if (effectivePlural) formData.set("stakeUnitPlural", effectivePlural);
       if (wagerNow && Number(creatorAmount) > 0) {
         formData.set("creatorSide", creatorSide);
         formData.set("creatorAmount", creatorAmount);
@@ -96,6 +121,8 @@ export function CreateBetForm() {
     if (minWager) formData.set("minWager", minWager);
     if (maxWager) formData.set("maxWager", maxWager);
     if (deadline) formData.set("deadline", deadline);
+    formData.set("stakeUnit", effectiveUnit || MONEY_UNIT);
+    if (effectivePlural) formData.set("stakeUnitPlural", effectivePlural);
 
     startTransition(async () => {
       const result = await createBetWithOptions(formData);
@@ -217,15 +244,105 @@ export function CreateBetForm() {
             </p>
           </div>
 
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <Label>Stake in</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={isMoney ? "default" : "outline"}
+                onClick={() => setStakeMode("money")}
+              >
+                $ Money
+              </Button>
+              <Button
+                type="button"
+                variant={!isMoney ? "default" : "outline"}
+                onClick={() => setStakeMode("custom")}
+              >
+                Something else
+              </Button>
+            </div>
+
+            {!isMoney && (
+              <div className="space-y-3 pt-1">
+                <div className="space-y-2">
+                  <Label htmlFor="stakeUnit">One of these, singular</Label>
+                  <Input
+                    id="stakeUnit"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    placeholder="slice of pizza"
+                    maxLength={40}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {STAKE_UNIT_PRESETS.map((preset) => (
+                    <button
+                      key={preset.unit}
+                      type="button"
+                      onClick={() => {
+                        setUnit(preset.unit);
+                        // Only store a plural that differs from the derived one.
+                        setUnitPlural(
+                          pluralizeUnit(preset.unit) === preset.plural ? "" : preset.plural
+                        );
+                      }}
+                      className={`text-xs font-medium rounded-full border px-3 py-1 transition-colors ${
+                        unit.trim() === preset.unit
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {preset.emoji} {preset.plural}
+                    </button>
+                  ))}
+                </div>
+
+                {effectiveUnit && (
+                  <p className="text-xs text-muted-foreground">
+                    Reads as{" "}
+                    <span className="text-foreground font-medium">
+                      {formatStake(3, effectiveUnit, effectivePlural)}
+                    </span>
+                    {" · "}
+                    <button
+                      type="button"
+                      className="text-primary hover:underline"
+                      onClick={() => setShowPluralOverride((v) => !v)}
+                    >
+                      {showPluralOverride ? "use the default plural" : "plural looks wrong?"}
+                    </button>
+                  </p>
+                )}
+
+                {showPluralOverride && (
+                  <div className="space-y-2">
+                    <Label htmlFor="stakeUnitPlural">Plural form</Label>
+                    <Input
+                      id="stakeUnitPlural"
+                      value={unitPlural}
+                      onChange={(e) => setUnitPlural(e.target.value)}
+                      placeholder={autoPlural || "slices of pizza"}
+                      maxLength={60}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="minWager">
-                Min wager <span className="text-muted-foreground font-normal">(optional)</span>
+                Min {wagerNoun} <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
-                  $
-                </span>
+                {isMoney && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
+                    $
+                  </span>
+                )}
                 <Input
                   id="minWager"
                   type="number"
@@ -234,18 +351,20 @@ export function CreateBetForm() {
                   placeholder="1.00"
                   min="0.01"
                   step="0.01"
-                  className="pl-6"
+                  className={isMoney ? "pl-6" : ""}
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="maxWager">
-                Max wager <span className="text-muted-foreground font-normal">(optional)</span>
+                Max {wagerNoun} <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
-                  $
-                </span>
+                {isMoney && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
+                    $
+                  </span>
+                )}
                 <Input
                   id="maxWager"
                   type="number"
@@ -254,7 +373,7 @@ export function CreateBetForm() {
                   placeholder="No limit"
                   min="0.01"
                   step="0.01"
-                  className="pl-6"
+                  className={isMoney ? "pl-6" : ""}
                 />
               </div>
             </div>
@@ -313,11 +432,13 @@ export function CreateBetForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="creatorAmount">Your wager</Label>
+                    <Label htmlFor="creatorAmount">Your {wagerNoun}</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
-                        $
-                      </span>
+                      {isMoney && (
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">
+                          $
+                        </span>
+                      )}
                       <Input
                         id="creatorAmount"
                         type="number"
@@ -326,7 +447,7 @@ export function CreateBetForm() {
                         placeholder="20.00"
                         min="0.01"
                         step="0.01"
-                        className="pl-6"
+                        className={isMoney ? "pl-6" : ""}
                       />
                     </div>
                   </div>

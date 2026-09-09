@@ -8,6 +8,7 @@ import { SplitBar } from "@/components/shared/SplitBar";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake, isMoneyUnit } from "@/lib/utils/formatStake";
 import { getNetBalanceHistory, getPortfolioStats } from "@/lib/utils/portfolio";
 import type { IouEntry } from "@/lib/types";
 
@@ -23,15 +24,34 @@ export default async function BalancesPage() {
     getIouLedger(user.id).catch(() => [] as IouEntry[]),
   ]);
 
-  const totalOwed = balances
-    .filter((b) => b.netAmount > 0)
-    .reduce((sum, b) => sum + b.netAmount, 0);
-  const totalOwing = balances
-    .filter((b) => b.netAmount < 0)
-    .reduce((sum, b) => sum + Math.abs(b.netAmount), 0);
+  // Everything below the fold is money: lifetime net, the sparkline, the
+  // owed/owing split. A single figure cannot span dollars and slices of
+  // pizza, so non-money units are filtered out here and summarised
+  // separately further down (migration 022).
+  const moneyLedger = ledger.filter((e) => isMoneyUnit(e.unit));
+  const allUnits = balances.flatMap((b) => b.units);
+  const moneyUnits = allUnits.filter((u) => isMoneyUnit(u.unit));
 
-  const stats = getPortfolioStats(ledger, user.id);
-  const history = getNetBalanceHistory(ledger, user.id);
+  const totalOwed = moneyUnits
+    .filter((u) => u.netAmount > 0)
+    .reduce((sum, u) => sum + u.netAmount, 0);
+  const totalOwing = moneyUnits
+    .filter((u) => u.netAmount < 0)
+    .reduce((sum, u) => sum + Math.abs(u.netAmount), 0);
+
+  // Net per non-money unit, summed across every friend.
+  const otherUnits = new Map<string, { unit: string; unitPlural: string | null; net: number }>();
+  for (const u of allUnits) {
+    if (isMoneyUnit(u.unit)) continue;
+    const entry = otherUnits.get(u.unit) ?? { unit: u.unit, unitPlural: u.unitPlural, net: 0 };
+    entry.net += u.netAmount;
+    if (!entry.unitPlural && u.unitPlural) entry.unitPlural = u.unitPlural;
+    otherUnits.set(u.unit, entry);
+  }
+  const otherTotals = Array.from(otherUnits.values()).filter((o) => Math.abs(o.net) >= 0.005);
+
+  const stats = getPortfolioStats(moneyLedger, user.id);
+  const history = getNetBalanceHistory(moneyLedger, user.id);
   const outstandingNet = totalOwed - totalOwing;
   const up = stats.lifetimeNet >= 0;
 
@@ -47,7 +67,7 @@ export default async function BalancesPage() {
         </p>
       </div>
 
-      {ledger.length > 0 && (
+      {moneyLedger.length > 0 && (
         // The net figure is the only reason this page exists. It reads as
         // the page's subject -- no card, no eyebrow label -- the same way
         // the dashboard's exposure line does, just scaled up to carry the
@@ -79,7 +99,7 @@ export default async function BalancesPage() {
         </div>
       )}
 
-      {balances.length > 0 && (
+      {moneyUnits.length > 0 && (
         // A hairline stands in for the card border this section used to
         // have -- enough to separate "what you've made lifetime" from
         // "what's live right now" without stacking a second box under the
@@ -115,6 +135,34 @@ export default async function BalancesPage() {
                 −{formatCurrency(totalOwing)}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {otherTotals.length > 0 && (
+        // Not money, so it cannot join the figures above -- but it is still
+        // debt, and it would be strange for the page to stay silent about it.
+        // One chip per unit, netted across everyone.
+        <div className="space-y-2 pt-5 border-t border-border">
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+            Not in money
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {otherTotals.map((o) => {
+              const owed = o.net > 0;
+              return (
+                <span
+                  key={o.unit}
+                  className={cn(
+                    "text-xs font-semibold tabular-nums rounded-full border px-3 py-1",
+                    owed ? "text-win border-win/30" : "text-loss border-loss/30"
+                  )}
+                >
+                  {owed ? "+" : "−"}
+                  {formatStake(Math.abs(o.net), o.unit, o.unitPlural)}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

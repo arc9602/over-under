@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { placeWager, placeOptionWager } from "@/lib/actions/bets";
 import { getPredictedPayout } from "@/lib/utils/betPool";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 import { savePendingWager, readPendingWager, clearPendingWager } from "@/lib/utils/pendingWager";
 import { SideChoice, type SideChoiceOption } from "./SideChoice";
 
@@ -24,6 +24,9 @@ interface BetInviteWagerProps {
   /** Null once the deadline has already passed at render time -- this component doesn't get mounted for that case, but it can still happen live (see below). */
   deadline: string | null;
   creatorName: string;
+  /** What the stake is denominated in -- 'USD' is money (migration 022). */
+  unit: string;
+  unitPlural: string | null;
 }
 
 function hasPassed(deadline: string | null): boolean {
@@ -39,7 +42,13 @@ export function BetInviteWager({
   maxWager,
   deadline,
   creatorName,
+  unit,
+  unitPlural,
 }: BetInviteWagerProps) {
+  // Amounts here are in the bet's own stake unit, not necessarily dollars.
+  const stake = (amount: number) =>
+    formatStake(amount, unit, unitPlural);
+
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -110,8 +119,8 @@ export function BetInviteWager({
     selectedOptionId && isValidAmount ? getPredictedPayout(mySideTotal, otherSideTotal, 0, parsedAmount) : null;
 
   const limitsText = [
-    minWager != null ? `min ${formatCurrency(minWager)}` : null,
-    maxWager != null ? `max ${formatCurrency(maxWager)}` : null,
+    minWager != null ? `min ${stake(minWager)}` : null,
+    maxWager != null ? `max ${stake(maxWager)}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -193,13 +202,13 @@ export function BetInviteWager({
           </p>
           <div className="flex items-center justify-between">
             <span className="font-bold">{selectedOption.label}</span>
-            <span className="font-bold tabular-nums">{formatCurrency(parsedAmount)}</span>
+            <span className="font-bold tabular-nums">{stake(parsedAmount)}</span>
           </div>
           {preview && (
             <div className="space-y-0.5">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Projected return</span>
-                <span className="font-bold tabular-nums">{formatCurrency(preview.payout)}</span>
+                <span className="font-bold tabular-nums">{stake(preview.payout)}</span>
               </div>
               <p className="text-[11px] text-muted-foreground">Moves as others join.</p>
             </div>
@@ -218,7 +227,7 @@ export function BetInviteWager({
             disabled={isPending}
             onClick={handleConfirmRestored}
           >
-            {isPending ? "Placing wager…" : `Confirm — put ${formatCurrency(parsedAmount)} on ${selectedOption.label}`}
+            {isPending ? "Placing wager…" : `Confirm — put ${stake(parsedAmount)} on ${selectedOption.label}`}
           </Button>
         </div>
       </div>
@@ -228,6 +237,8 @@ export function BetInviteWager({
   return (
     <div className="space-y-4">
       <SideChoice
+        unit={unit}
+        unitPlural={unitPlural}
         options={options}
         value={selectedOptionId}
         onChange={setSelectedOptionId}
@@ -261,7 +272,7 @@ export function BetInviteWager({
               <div className="space-y-1 rounded-lg bg-secondary/50 p-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Projected return if {selectedOption.label} wins</span>
-                  <span className="font-bold tabular-nums">{formatCurrency(preview.payout)}</span>
+                  <span className="font-bold tabular-nums">{stake(preview.payout)}</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground">Moves as others join.</p>
               </div>
@@ -278,7 +289,7 @@ export function BetInviteWager({
               {isPending
                 ? "Placing wager…"
                 : isSignedIn
-                  ? `Put ${formatCurrency(isValidAmount ? parsedAmount : 0)} on ${selectedOption.label}`
+                  ? `Put ${stake(isValidAmount ? parsedAmount : 0)} on ${selectedOption.label}`
                   : "Sign in to lock it in"}
             </Button>
           </div>

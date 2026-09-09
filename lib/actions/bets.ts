@@ -24,6 +24,12 @@ const createBetWithOptionsSchema = z.object({
     .refine((labels) => new Set(labels.map((l) => l.toLowerCase())).size === labels.length, {
       message: "Option labels must be unique",
     }),
+  // 'USD' (or absent) means money. Anything else is a free-text singular
+  // label like "slice of pizza" that follows the bet through payouts into
+  // the ledger (migration 022). The plural is optional and derived when
+  // omitted.
+  stakeUnit: lineText(1, 40).default("USD"),
+  stakeUnitPlural: lineText(1, 60).optional(),
   minWager: z.coerce.number().positive().max(100000).optional(),
   maxWager: z.coerce.number().positive().max(100000).optional(),
   deadline: z.string().optional(),
@@ -35,6 +41,12 @@ const createBetSchema = z
     description: blockText(500).optional(),
     sideALabel: lineText(1, 50).default("Yes"),
     sideBLabel: lineText(1, 50).default("No"),
+    // 'USD' (or absent) means money. Anything else is a free-text singular
+    // label like "slice of pizza" that follows the bet through payouts into
+    // the ledger (migration 022). The plural is optional and derived when
+    // omitted.
+    stakeUnit: lineText(1, 40).default("USD"),
+    stakeUnitPlural: lineText(1, 60).optional(),
     minWager: z.coerce.number().positive().max(100000).optional(),
     maxWager: z.coerce.number().positive().max(100000).optional(),
     deadline: z.string().optional(),
@@ -63,6 +75,8 @@ export async function createBet(formData: FormData) {
     description: formData.get("description") || undefined,
     sideALabel: formData.get("sideALabel"),
     sideBLabel: formData.get("sideBLabel"),
+    stakeUnit: formData.get("stakeUnit") || undefined,
+    stakeUnitPlural: formData.get("stakeUnitPlural") || undefined,
     minWager: formData.get("minWager") || undefined,
     maxWager: formData.get("maxWager") || undefined,
     deadline: formData.get("deadline") || undefined,
@@ -75,8 +89,8 @@ export async function createBet(formData: FormData) {
   }
 
   const {
-    title, description, sideALabel, sideBLabel, minWager, maxWager, deadline,
-    creatorSide, creatorAmount,
+    title, description, sideALabel, sideBLabel, stakeUnit, stakeUnitPlural,
+    minWager, maxWager, deadline, creatorSide, creatorAmount,
   } = parsed.data;
 
   const { data: bet, error } = await supabase
@@ -88,6 +102,8 @@ export async function createBet(formData: FormData) {
       side_b_label: sideBLabel,
       min_wager: minWager ?? null,
       max_wager: maxWager ?? null,
+      stake_unit: stakeUnit || "USD",
+      stake_unit_plural: stakeUnitPlural ?? null,
       deadline: deadline ? new Date(deadline).toISOString() : null,
       creator_id: user.id,
     })
@@ -127,6 +143,8 @@ export async function createBetWithOptions(formData: FormData) {
     title: formData.get("title"),
     description: formData.get("description") || undefined,
     optionLabels: formData.getAll("optionLabels"),
+    stakeUnit: formData.get("stakeUnit") || undefined,
+    stakeUnitPlural: formData.get("stakeUnitPlural") || undefined,
     minWager: formData.get("minWager") || undefined,
     maxWager: formData.get("maxWager") || undefined,
     deadline: formData.get("deadline") || undefined,
@@ -136,7 +154,10 @@ export async function createBetWithOptions(formData: FormData) {
     return { error: "Invalid form data", details: parsed.error.flatten() };
   }
 
-  const { title, description, optionLabels, minWager, maxWager, deadline } = parsed.data;
+  const {
+    title, description, optionLabels, minWager, maxWager, deadline,
+    stakeUnit, stakeUnitPlural,
+  } = parsed.data;
 
   const serviceClient = await createServiceClient();
   const { data: betId, error } = await serviceClient.rpc("create_bet_with_options", {
@@ -147,6 +168,8 @@ export async function createBetWithOptions(formData: FormData) {
     p_min_wager: minWager ?? null,
     p_max_wager: maxWager ?? null,
     p_deadline: deadline ? new Date(deadline).toISOString() : null,
+    p_stake_unit: stakeUnit || "USD",
+    p_stake_unit_plural: stakeUnitPlural ?? null,
   });
 
   if (error) return { error: error.message };

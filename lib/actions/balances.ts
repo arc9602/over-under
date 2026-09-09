@@ -4,18 +4,33 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { MONEY_UNIT, isMoneyUnit } from "@/lib/utils/formatStake";
 
 const markSettledSchema = z.object({
   friendId: z.uuid(),
   amount: z.coerce.number().positive().max(100000),
+  // Which debt is being settled. Paying back $20 must not clear a pizza debt,
+  // so every read and write below is scoped to one unit (migration 022).
+  unit: z.string().trim().min(1).max(40).default(MONEY_UNIT),
+  unitPlural: z.string().trim().min(1).max(60).optional(),
 });
 
-export async function markSettled(friendId: string, amount: number) {
+export async function markSettled(
+  friendId: string,
+  amount: number,
+  unit: string = MONEY_UNIT,
+  unitPlural?: string | null
+) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const parsed = markSettledSchema.safeParse({ friendId, amount });
+  const parsed = markSettledSchema.safeParse({
+    friendId,
+    amount,
+    unit,
+    unitPlural: unitPlural ?? undefined,
+  });
   if (!parsed.success) return { error: "Invalid settlement amount" };
 
   // iou_ledger's RLS has no UPDATE policy at all -- it's service-role-only by
@@ -44,6 +59,7 @@ export async function markSettled(friendId: string, amount: number) {
     .select("id, amount")
     .eq("debtor_id", user.id)
     .eq("creditor_id", parsed.data.friendId)
+    .eq("unit", parsed.data.unit)
     .eq("settled", false)
     .order("created_at", { ascending: true });
 
@@ -60,6 +76,8 @@ export async function markSettled(friendId: string, amount: number) {
     from_user_id: user.id,
     to_user_id: parsed.data.friendId,
     amount: parsed.data.amount,
+    unit: parsed.data.unit,
+    unit_plural: parsed.data.unitPlural ?? null,
   });
   // Bail before touching iou_ledger if the settlement record itself didn't
   // save -- otherwise debt could be marked settled with no record of why.
@@ -74,15 +92,23 @@ export async function markSettled(friendId: string, amount: number) {
   // partial payment: the ledger's balance is the sum of every posting, so a
   // $30 payment against a $100 debt nets to -$70 without needing the debt
   // itself to be split or mutated.
-  const { error: ledgerError } = await serviceClient.rpc("record_ledger_transaction", {
-    p_kind: "debt_payment",
-    p_bet_id: null,
-    p_market_id: null,
-    p_increase_user_id: user.id,
-    p_decrease_user_id: parsed.data.friendId,
-    p_amount: parsed.data.amount,
-  });
-  if (ledgerError) return { error: ledgerError.message };
+  //
+  // Money only. ledger_postings has no notion of what an amount is
+  // denominated in, so posting a 3-slice payment would add 3.00 alongside
+  // dollars and quietly corrupt every balance it feeds. Non-money debt lives
+  // in iou_ledger alone -- the same rule mirror_iou_to_ledger applies to
+  // non-USD IOUs in migration 022.
+  if (isMoneyUnit(parsed.data.unit)) {
+    const { error: ledgerError } = await serviceClient.rpc("record_ledger_transaction", {
+      p_kind: "debt_payment",
+      p_bet_id: null,
+      p_market_id: null,
+      p_increase_user_id: user.id,
+      p_decrease_user_id: parsed.data.friendId,
+      p_amount: parsed.data.amount,
+    });
+    if (ledgerError) return { error: ledgerError.message };
+  }
 
   // Whole rows only, oldest first: an IOU is settled or it isn't, so a
   // partial payment against one large row can't be represented here and is

@@ -79,8 +79,21 @@ export type MarketWithDetails = MarketWithBook & {
   market_resolutions: MarketResolution[];
 };
 
-export type NetBalance = {
-  friend: Profile;
+/**
+ * One friend's debt in a single unit (migration 022). Units never net against
+ * each other -- owing someone $20 and 3 slices of pizza is two obligations
+ * that settle independently -- so a friend can hold several of these at once.
+ */
+export type UnitBalance = {
+  /** 'USD' means money; anything else is a free-text singular label. */
+  unit: string;
+  unitPlural: string | null;
   netAmount: number; // positive = they owe you, negative = you owe them
   unsettledIous: IouEntry[];
+};
+
+export type NetBalance = {
+  friend: Profile;
+  /** Never empty: a friend with nothing outstanding is omitted entirely. */
+  units: UnitBalance[];
 };

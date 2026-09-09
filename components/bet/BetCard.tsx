@@ -5,7 +5,7 @@ import { SplitBar } from "@/components/shared/SplitBar";
 import { BetStatusBadge } from "./BetStatusBadge";
 import { CountdownTimer } from "./CountdownTimer";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 import {
   getSideTotals,
   getPariMutuelPreview,
@@ -22,6 +22,11 @@ interface BetCardProps {
 }
 
 export function BetCard({ bet, currentUserId }: BetCardProps) {
+  // Bets can be staked in something other than money (migration 022);
+  // every amount on this screen is denominated in the bet's own unit.
+  const stake = (amount: number) =>
+    formatStake(amount, bet.stake_unit, bet.stake_unit_plural);
+
   const options = getBetOptions(bet);
   const isTwoOption = options.length === 2;
 
@@ -110,7 +115,7 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-xs text-muted-foreground">Stake</p>
-                <p className="font-bold text-base tabular-nums">{formatCurrency(preview.wager)}</p>
+                <p className="font-bold text-base tabular-nums">{stake(preview.wager)}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Potential win</p>
@@ -124,7 +129,7 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
                     isTwoOption ? (mine.side === "a" ? "text-win" : "text-loss") : "text-primary"
                   )}
                 >
-                  +{formatCurrency(preview.profit)}
+                  +{stake(preview.profit)}
                 </p>
               </div>
             </div>
@@ -133,7 +138,7 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
               <div>
                 <p className="text-xs text-muted-foreground">Stake</p>
                 <p className="font-semibold text-sm text-muted-foreground tabular-nums">
-                  {formatCurrency(mine.amount)}
+                  {stake(mine.amount)}
                 </p>
               </div>
               <div className="text-right">
@@ -147,7 +152,7 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
                   )}
                 >
                   {outcome.net >= 0 ? "+" : "−"}
-                  {formatCurrency(Math.abs(outcome.net))}
+                  {stake(Math.abs(outcome.net))}
                 </p>
               </div>
             </div>
@@ -160,13 +165,13 @@ export function BetCard({ bet, currentUserId }: BetCardProps) {
             <div>
               <p className="text-xs text-muted-foreground">Stake</p>
               <p className="font-semibold text-sm text-muted-foreground tabular-nums">
-                {formatCurrency(mine.amount)}
+                {stake(mine.amount)}
               </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground tabular-nums">
               {totalPool > 0
-                ? `${formatCurrency(totalPool)} in the pool`
+                ? `${stake(totalPool)} in the pool`
                 : isTerminal
                 ? "No wagers were placed."
                 : "Waiting for wagers"}

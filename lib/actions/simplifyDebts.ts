@@ -3,7 +3,11 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { simplifyDebtCycles, type DebtEdge, type SimplifyResult } from "@/lib/utils/simplifyDebts";
+import {
+  simplifyDebtCyclesByUnit,
+  type UnitDebtEdge,
+  type UnitSimplifyResult,
+} from "@/lib/utils/simplifyDebts";
 
 /**
  * Cycle-cancellation for the whole app's debt graph -- see migration 019's
@@ -53,21 +57,25 @@ import { simplifyDebtCycles, type DebtEdge, type SimplifyResult } from "@/lib/ut
  */
 async function computeSimplificationPlan(
   serviceClient: Awaited<ReturnType<typeof createServiceClient>>
-): Promise<SimplifyResult> {
+): Promise<UnitSimplifyResult> {
   const { data, error } = await serviceClient
     .from("iou_ledger")
-    .select("creditor_id, debtor_id, amount")
+    .select("creditor_id, debtor_id, amount, unit")
     .eq("settled", false);
 
   if (error) throw error;
 
-  const edges: DebtEdge[] = (data ?? []).map((row) => ({
+  const edges: UnitDebtEdge[] = (data ?? []).map((row) => ({
     debtorId: row.debtor_id,
     creditorId: row.creditor_id,
     cents: Math.round(row.amount * 100),
+    // Bets can be staked in things other than money (migration 022). A cycle
+    // cannot span units, so the graph is partitioned by unit before any
+    // cancellation happens -- see simplifyDebtCyclesByUnit.
+    unit: row.unit || "USD",
   }));
 
-  return simplifyDebtCycles(edges);
+  return simplifyDebtCyclesByUnit(edges);
 }
 
 export type PreviewSimplificationResult =
@@ -184,12 +192,15 @@ export async function applySimplification(): Promise<ApplySimplificationResult> 
 
     // Field names are the contract 019 parses off the JSONB array --
     // `debtor`/`creditor`/`cents`, not the camelCase DebtEdge fields above.
+    // `unit` was added by 022; it scopes each reduction to rows in that unit,
+    // so a dollar reduction can never retire a pizza IOU.
     const { error } = await serviceClient.rpc("simplify_debt_cycles", {
       p_user_id: user.id,
       p_reductions: plan.reductions.map((r) => ({
         debtor: r.debtorId,
         creditor: r.creditorId,
         cents: r.cents,
+        unit: r.unit,
       })),
     });
 

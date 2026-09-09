@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { MONEY_UNIT, formatStake } from "@/lib/utils/formatStake";
 
 export interface SideChoiceOption {
   /** For a 2-option bet this is the bet_options row id, same as everywhere else. */
@@ -22,6 +22,10 @@ interface SideChoiceProps {
   onChange: (optionId: string) => void;
   /** Accessible name for the radio group, e.g. the bet's own title. */
   groupLabel: string;
+  /** What the stake is denominated in -- 'USD' is money (migration 022). */
+  /** Omitted by the market and landing callers, which are always money. */
+  unit?: string;
+  unitPlural?: string | null;
   id?: string;
 }
 
@@ -36,7 +40,13 @@ interface SideChoiceProps {
  * grid instead of a hardcoded column count, since a fixed 2-column layout
  * breaks past 4 options.
  */
-export function SideChoice({ options, value, onChange, groupLabel, id }: SideChoiceProps) {
+export function SideChoice({
+  options, value, onChange, groupLabel, unit, unitPlural, id,
+}: SideChoiceProps) {
+  // Amounts here are in the bet's own stake unit, not necessarily dollars.
+  const stake = (amount: number) =>
+    formatStake(amount, unit ?? MONEY_UNIT, unitPlural);
+
   const groupName = id ?? "side-choice";
 
   return (
@@ -82,7 +92,7 @@ export function SideChoice({ options, value, onChange, groupLabel, id }: SideCho
             </span>
 
             <span className="text-xs font-bold tabular-nums text-foreground">
-              {option.count > 0 ? formatCurrency(option.total) : "No one yet"}
+              {option.count > 0 ? stake(option.total) : "No one yet"}
             </span>
 
             {option.names.length > 0 && (

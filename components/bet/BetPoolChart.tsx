@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ProbabilityChart } from "@/components/charts/ProbabilityChart";
 import { TimeframeTabs } from "@/components/charts/TimeframeTabs";
 import { filterByTimeframe, downsampleSeries, formatTooltipTime } from "@/lib/utils/chartData";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 import type { BetPoolPoint, Timeframe } from "@/lib/types";
 
 /**
@@ -20,10 +20,19 @@ interface BetPoolChartProps {
   data: BetPoolPoint[];
   sideALabel: string;
   sideBLabel: string;
+  /** What the stake is denominated in -- 'USD' is money (migration 022). */
+  unit: string;
+  unitPlural: string | null;
   className?: string;
 }
 
-export function BetPoolChart({ data, sideALabel, sideBLabel, className }: BetPoolChartProps) {
+export function BetPoolChart({
+  data, sideALabel, sideBLabel, unit, unitPlural, className,
+}: BetPoolChartProps) {
+  // Amounts here are in the bet's own stake unit, not necessarily dollars.
+  const stake = (amount: number) =>
+    formatStake(amount, unit, unitPlural);
+
   const [timeframe, setTimeframe] = useState<Timeframe>("ALL");
   const [hovered, setHovered] = useState<BetPoolPoint | null>(null);
 
@@ -78,7 +87,7 @@ export function BetPoolChart({ data, sideALabel, sideBLabel, className }: BetPoo
               <p className="font-bold tabular-nums">
                 {sideALabel} {Math.round(p.sideAProbability)}% · {sideBLabel} {Math.round(p.sideBProbability)}%
               </p>
-              <p className="text-muted-foreground">{formatCurrency(p.poolTotal)} in the pool</p>
+              <p className="text-muted-foreground">{stake(p.poolTotal)} in the pool</p>
             </div>
           )}
         />

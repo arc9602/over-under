@@ -12,7 +12,7 @@ import {
   proposeOptionResolution,
   confirmOptionResolution,
 } from "@/lib/actions/resolutions";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 import { getPariMutuelPreview, getOptionPariMutuelPreview, getBetOptions } from "@/lib/utils/betPool";
 import type { BetWithDetails } from "@/lib/types";
 
@@ -23,6 +23,11 @@ interface ResolutionPanelProps {
 }
 
 export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelProps) {
+  // Bets can be staked in something other than money (migration 022);
+  // every amount on this screen is denominated in the bet's own unit.
+  const stake = (amount: number) =>
+    formatStake(amount, bet.stake_unit, bet.stake_unit_plural);
+
   const [isPending, startTransition] = useTransition();
 
   const options = getBetOptions(bet);
@@ -103,8 +108,8 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
               {broke_even
                 ? "Break-even"
                 : won
-                ? `+${formatCurrency(net)}`
-                : `−${formatCurrency(Math.abs(net))}`}
+                ? `+${stake(net)}`
+                : `−${stake(Math.abs(net))}`}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               <span className="font-medium text-foreground">{label}</span> won
@@ -149,8 +154,8 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
                       {preview.isParticipant && (
                         <span className={`text-xs ${preview.profit >= 0 ? "text-win" : "text-muted-foreground"}`}>
                           {preview.profit >= 0
-                            ? `You'd net +${formatCurrency(preview.profit)}`
-                            : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
+                            ? `You'd net +${stake(preview.profit)}`
+                            : `You'd lose ${stake(Math.abs(preview.profit))}`}
                         </span>
                       )}
                     </Button>
@@ -170,8 +175,8 @@ export function ResolutionPanel({ bet, currentUserId, netIou }: ResolutionPanelP
                       {preview.isParticipant && (
                         <span className={`text-xs ${preview.profit >= 0 ? "text-win" : "text-muted-foreground"}`}>
                           {preview.profit >= 0
-                            ? `You'd net +${formatCurrency(preview.profit)}`
-                            : `You'd lose ${formatCurrency(Math.abs(preview.profit))}`}
+                            ? `You'd net +${stake(preview.profit)}`
+                            : `You'd lose ${stake(Math.abs(preview.profit))}`}
                         </span>
                       )}
                     </Button>

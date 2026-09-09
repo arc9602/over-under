@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { placeWager } from "@/lib/actions/bets";
 import { getPredictedPayout } from "@/lib/utils/betPool";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 
 interface WagerFormProps {
   identifier: { betId: string } | { inviteCode: string };
@@ -19,14 +19,21 @@ interface WagerFormProps {
   sideATotal: number;
   sideBTotal: number;
   /** If the user already has a wager on this bet, lock the side and just let them add more. */
+  /** What the stake is denominated in -- 'USD' is money (migration 022). */
+  unit: string;
+  unitPlural: string | null;
   existingSide?: "a" | "b";
   existingAmount?: number;
 }
 
 export function WagerForm({
   identifier, sideALabel, sideBLabel, minWager, maxWager, sideATotal, sideBTotal,
-  existingSide, existingAmount = 0,
+  unit, unitPlural, existingSide, existingAmount = 0,
 }: WagerFormProps) {
+  // Amounts here are in the bet's own stake unit, not necessarily dollars.
+  const stake = (amount: number) =>
+    formatStake(amount, unit, unitPlural);
+
   const [isPending, startTransition] = useTransition();
   const [side, setSide] = useState<"a" | "b">(existingSide ?? "a");
   const [amountInput, setAmountInput] = useState("");
@@ -105,7 +112,7 @@ export function WagerForm({
         <div className="rounded-lg bg-secondary/50 p-3 space-y-1">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Predicted payout if {activeSideLabel} wins</span>
-            <span className="font-bold tabular-nums">{formatCurrency(preview.payout)}</span>
+            <span className="font-bold tabular-nums">{stake(preview.payout)}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Profit</span>
@@ -115,7 +122,7 @@ export function WagerForm({
               }`}
             >
               {preview.profit > 0 ? "+" : ""}
-              {formatCurrency(preview.profit)}
+              {stake(preview.profit)}
             </span>
           </div>
           {otherSideTotal === 0 && (

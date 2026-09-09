@@ -5,7 +5,7 @@ import { CountdownTimer } from "./CountdownTimer";
 import { BetPoolChart } from "./BetPoolChart";
 import { BetWagerChart } from "./BetWagerChart";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 import { formatDate } from "@/lib/utils/formatDate";
 import {
   getSideTotals,
@@ -33,12 +33,15 @@ function SideList({
   total,
   currentUserId,
   highlighted,
+  stake,
 }: {
   label: string;
   rows: BetWithDetails["bet_participants"];
   total: number;
   currentUserId: string;
   highlighted: boolean;
+  /** Formats an amount in the bet's own stake unit (migration 022). */
+  stake: (amount: number) => string;
 }) {
   return (
     <Card className={highlighted ? "border-primary/50 bg-primary/5" : ""}>
@@ -46,7 +49,7 @@ function SideList({
         <div className="flex items-center justify-between gap-2">
           <p className="font-bold text-sm truncate min-w-0">{label}</p>
           <p className="text-sm font-semibold text-primary tabular-nums shrink-0">
-            {formatCurrency(total)}
+            {stake(total)}
           </p>
         </div>
         {rows.length === 0 ? (
@@ -60,7 +63,7 @@ function SideList({
                   {p.user_id === currentUserId && <span className="text-primary ml-1">(you)</span>}
                 </span>
                 <span className="font-medium tabular-nums shrink-0">
-                  {formatCurrency(p.amount)}
+                  {stake(p.amount)}
                 </span>
               </li>
             ))}
@@ -82,6 +85,7 @@ function MyPosition({
   outcome,
   isTwoOption,
   totalPool,
+  stake,
 }: {
   mine: Participant | undefined;
   mySideLabel: string | null;
@@ -89,12 +93,14 @@ function MyPosition({
   outcome: BetOutcome;
   isTwoOption: boolean;
   totalPool: number;
+  /** Formats an amount in the bet's own stake unit (migration 022). */
+  stake: (amount: number) => string;
 }) {
   if (!mine) {
     return (
       <p className="text-sm text-muted-foreground tabular-nums">
         {totalPool > 0
-          ? `${formatCurrency(totalPool)} wagered so far. You haven't taken a side.`
+          ? `${stake(totalPool)} wagered so far. You haven't taken a side.`
           : "Nobody has wagered yet."}
       </p>
     );
@@ -110,7 +116,7 @@ function MyPosition({
         <div className="flex items-baseline gap-6">
           <div>
             <p className="text-xs text-muted-foreground">Stake</p>
-            <p className="text-xl font-semibold tabular-nums">{formatCurrency(preview.wager)}</p>
+            <p className="text-xl font-semibold tabular-nums">{stake(preview.wager)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">If you&apos;re right</p>
@@ -118,7 +124,7 @@ function MyPosition({
                 payout returns the stake as well, which is money the user
                 already had rather than something the bet won them. */}
             <p className={cn("text-xl font-semibold tabular-nums", colorClass)}>
-              +{formatCurrency(preview.profit)}
+              +{stake(preview.profit)}
             </p>
           </div>
         </div>
@@ -142,7 +148,7 @@ function MyPosition({
           <div>
             <p className="text-xs text-muted-foreground">Stake</p>
             <p className="text-lg font-semibold text-muted-foreground tabular-nums">
-              {formatCurrency(mine.amount)}
+              {stake(mine.amount)}
             </p>
           </div>
           <div>
@@ -156,7 +162,7 @@ function MyPosition({
               )}
             >
               {outcome.net >= 0 ? "+" : "−"}
-              {formatCurrency(Math.abs(outcome.net))}
+              {stake(Math.abs(outcome.net))}
             </p>
           </div>
         </div>
@@ -175,7 +181,7 @@ function MyPosition({
         You were on <span className="font-medium text-foreground">{mySideLabel}</span>
       </p>
       <p className="text-lg font-semibold text-muted-foreground tabular-nums mt-0.5">
-        {formatCurrency(mine.amount)} staked
+        {stake(mine.amount)} staked
       </p>
     </div>
   );
@@ -251,6 +257,11 @@ function NextUp({
 }
 
 export function BetDetail({ bet, currentUserId }: BetDetailProps) {
+  // Bets can be staked in something other than money (migration 022); every
+  // amount on this screen is denominated in the bet's own unit.
+  const stake = (amount: number) =>
+    formatStake(amount, bet.stake_unit, bet.stake_unit_plural);
+
   const options = getBetOptions(bet);
   const isTwoOption = options.length === 2;
   const totalPool = bet.bet_participants.reduce((sum, p) => sum + p.amount, 0);
@@ -334,6 +345,7 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
 
       {/* 2. Where do I stand. */}
       <MyPosition
+        stake={stake}
         mine={mine}
         mySideLabel={mySideLabel}
         preview={preview}
@@ -350,7 +362,7 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-base font-semibold text-primary tabular-nums">
-            {formatCurrency(totalPool)}
+            {stake(totalPool)}
           </span>
           <span className="text-muted-foreground text-sm">in the pool</span>
         </div>
@@ -360,13 +372,20 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
         )}
 
         {isTwoOption && poolHistory && (
-          <BetPoolChart data={poolHistory} sideALabel={bet.side_a_label} sideBLabel={bet.side_b_label} />
+          <BetPoolChart
+            data={poolHistory}
+            sideALabel={bet.side_a_label}
+            sideBLabel={bet.side_b_label}
+            unit={bet.stake_unit}
+            unitPlural={bet.stake_unit_plural}
+          />
         )}
 
         <div className="grid grid-cols-2 gap-3">
           {isTwoOption && sideA && sideB ? (
             <>
               <SideList
+                stake={stake}
                 label={bet.side_a_label}
                 rows={sideA.rows}
                 total={sideA.total}
@@ -374,6 +393,7 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
                 highlighted={mine?.side === "a"}
               />
               <SideList
+                stake={stake}
                 label={bet.side_b_label}
                 rows={sideB.rows}
                 total={sideB.total}
@@ -386,6 +406,7 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
               const totals = getOptionTotals(bet.bet_participants, option.id);
               return (
                 <SideList
+                  stake={stake}
                   key={option.id}
                   label={option.label}
                   rows={totals.rows}
@@ -400,6 +421,8 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
 
         {showWagerChart && userPoolHistory && (
           <BetWagerChart
+            unit={bet.stake_unit}
+            unitPlural={bet.stake_unit_plural}
             data={userPoolHistory.points}
             referenceOdds={userPoolHistory.referenceOdds}
             side={userPoolHistory.side}
@@ -411,8 +434,8 @@ export function BetDetail({ bet, currentUserId }: BetDetailProps) {
         {(bet.min_wager != null || bet.max_wager != null) && (
           <p className="text-xs text-muted-foreground">
             {[
-              bet.min_wager != null ? `Min wager ${formatCurrency(bet.min_wager)}` : null,
-              bet.max_wager != null ? `Max wager ${formatCurrency(bet.max_wager)}` : null,
+              bet.min_wager != null ? `Min wager ${stake(bet.min_wager)}` : null,
+              bet.max_wager != null ? `Max wager ${stake(bet.max_wager)}` : null,
             ]
               .filter(Boolean)
               .join(" · ")}

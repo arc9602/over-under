@@ -184,6 +184,8 @@ export type Database = {
           min_wager: number | null;
           max_wager: number | null;
           currency: string;
+          stake_unit: string;
+          stake_unit_plural: string | null;
           deadline: string | null;
           status: BetStatus;
           creator_id: string;
@@ -200,6 +202,8 @@ export type Database = {
           min_wager?: number | null;
           max_wager?: number | null;
           currency?: string;
+          stake_unit?: string;
+          stake_unit_plural?: string | null;
           deadline?: string | null;
           status?: BetStatus;
           creator_id: string;
@@ -216,6 +220,8 @@ export type Database = {
           min_wager?: number | null;
           max_wager?: number | null;
           currency?: string;
+          stake_unit?: string;
+          stake_unit_plural?: string | null;
           deadline?: string | null;
           status?: BetStatus;
           creator_id?: string;
@@ -588,6 +594,11 @@ export type Database = {
           creditor_id: string;
           debtor_id: string;
           amount: number;
+          // Migration 022. What this debt is denominated in: 'USD' is money,
+          // anything else is a free-text label from bets.stake_unit. Debts in
+          // different units never net and never share a simplification cycle.
+          unit: string;
+          unit_plural: string | null;
           settled: boolean;
           settled_at: string | null;
           created_at: string;
@@ -603,6 +614,8 @@ export type Database = {
           creditor_id: string;
           debtor_id: string;
           amount: number;
+          unit?: string;
+          unit_plural?: string | null;
           settled?: boolean;
           settled_at?: string | null;
           created_at?: string;
@@ -615,6 +628,8 @@ export type Database = {
           creditor_id?: string;
           debtor_id?: string;
           amount?: number;
+          unit?: string;
+          unit_plural?: string | null;
           settled?: boolean;
           settled_at?: string | null;
           created_at?: string;
@@ -643,6 +658,8 @@ export type Database = {
           from_user_id: string;
           to_user_id: string;
           amount: number;
+          unit: string;
+          unit_plural: string | null;
           note: string | null;
           created_at: string;
         };
@@ -651,6 +668,8 @@ export type Database = {
           from_user_id: string;
           to_user_id: string;
           amount: number;
+          unit?: string;
+          unit_plural?: string | null;
           note?: string | null;
           created_at?: string;
         };
@@ -659,6 +678,8 @@ export type Database = {
           from_user_id?: string;
           to_user_id?: string;
           amount?: number;
+          unit?: string;
+          unit_plural?: string | null;
           note?: string | null;
           created_at?: string;
         };
@@ -1091,6 +1112,9 @@ export type Database = {
           p_min_wager: number | null;
           p_max_wager: number | null;
           p_deadline: string | null;
+          // Added by 022; both default to money when omitted.
+          p_stake_unit?: string;
+          p_stake_unit_plural?: string | null;
         };
         Returns: string;
       };
@@ -1246,6 +1270,8 @@ export type Database = {
       // the JSONB shape lib/utils/simplifyDebts.ts's reductions are mapped
       // into, not the camelCase DebtEdge fields that module exports.
       simplify_debt_cycles: {
+        // p_reductions is [{debtor, creditor, cents, unit}] -- `unit` added by
+        // 022 so a reduction can only ever retire rows in its own unit.
         Args: { p_user_id: string; p_reductions: Json };
         Returns: Database["public"]["Tables"]["debt_simplifications"]["Row"];
       };

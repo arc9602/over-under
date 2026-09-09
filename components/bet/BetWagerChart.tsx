@@ -6,7 +6,7 @@ import { ProbabilityChart } from "@/components/charts/ProbabilityChart";
 import { TimeframeTabs } from "@/components/charts/TimeframeTabs";
 import { cn } from "@/lib/utils";
 import { filterByTimeframe, downsampleSeries, formatTooltipTime } from "@/lib/utils/chartData";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 import type { UserBetPoolPoint, Timeframe } from "@/lib/types";
 
 /**
@@ -23,6 +23,9 @@ interface BetWagerChartProps {
   side: "a" | "b" | null;
   sideALabel: string;
   sideBLabel: string;
+  /** What the stake is denominated in -- 'USD' is money (migration 022). */
+  unit: string;
+  unitPlural: string | null;
   className?: string;
 }
 
@@ -32,8 +35,14 @@ export function BetWagerChart({
   side,
   sideALabel,
   sideBLabel,
+  unit,
+  unitPlural,
   className,
 }: BetWagerChartProps) {
+  // Amounts here are in the bet's own stake unit, not necessarily dollars.
+  const stake = (amount: number) =>
+    formatStake(amount, unit, unitPlural);
+
   const [timeframe, setTimeframe] = useState<Timeframe>("ALL");
   const [hovered, setHovered] = useState<UserBetPoolPoint | null>(null);
 
@@ -63,14 +72,14 @@ export function BetWagerChart({
                 )}
               >
                 {shown.pnl >= 0 ? "+" : "−"}
-                {formatCurrency(Math.abs(shown.pnl))}
+                {stake(Math.abs(shown.pnl))}
               </span>
             ) : (
               <span className="text-3xl font-semibold text-muted-foreground">—</span>
             )}
             <p className="text-xs text-muted-foreground">
               {shown
-                ? `${formatCurrency(shown.wager)} wagered · payout ${formatCurrency(shown.projectedPayout)}`
+                ? `${stake(shown.wager)} wagered · payout ${stake(shown.projectedPayout)}`
                 : "No wager yet"}
               {hovered && ` · ${formatTooltipTime(hovered.timestamp)}`}
             </p>
@@ -92,7 +101,7 @@ export function BetWagerChart({
               <p className="font-bold tabular-nums">{Math.round(p.currentOdds)}% pool share</p>
               <p className={cn("tabular-nums", p.pnl >= 0 ? "text-win" : "text-loss")}>
                 {p.pnl >= 0 ? "+" : "−"}
-                {formatCurrency(Math.abs(p.pnl))} net
+                {stake(Math.abs(p.pnl))} net
               </p>
             </div>
           )}

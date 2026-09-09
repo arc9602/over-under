@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { IouEntry, NetBalance, Profile } from "@/lib/types";
+import { MONEY_UNIT } from "@/lib/utils/formatStake";
+import type { IouEntry, NetBalance, Profile, UnitBalance } from "@/lib/types";
 
 export async function getIouLedger(userId: string): Promise<IouEntry[]> {
   const supabase = await createClient();
@@ -48,6 +49,13 @@ export async function getNetIouForMarket(marketId: string, userId: string): Prom
   );
 }
 
+/**
+ * Net balances per friend, split by unit (migration 022).
+ *
+ * Debts in different units are separate obligations: $20 and 3 slices of pizza
+ * cannot be added, so each friend carries a list of per-unit balances rather
+ * than one number. Money sorts first; a unit that nets to zero is dropped.
+ */
 export async function getNetBalancesForUser(userId: string): Promise<NetBalance[]> {
   const supabase = await createClient();
 
@@ -59,16 +67,13 @@ export async function getNetBalancesForUser(userId: string): Promise<NetBalance[
 
   if (error) throw error;
 
-  // Collect all friend IDs
   const friendIds = new Set<string>();
   for (const iou of ious ?? []) {
-    const friendId = iou.creditor_id === userId ? iou.debtor_id : iou.creditor_id;
-    friendIds.add(friendId);
+    friendIds.add(iou.creditor_id === userId ? iou.debtor_id : iou.creditor_id);
   }
 
   if (friendIds.size === 0) return [];
 
-  // Fetch friend profiles
   const { data: profiles } = await supabase
     .from("profiles")
     .select("*")
@@ -78,35 +83,53 @@ export async function getNetBalancesForUser(userId: string): Promise<NetBalance[
     (profiles ?? []).map((p) => [p.id, p])
   );
 
-  // Compute net balance per friend
-  const balanceMap = new Map<string, { net: number; ious: IouEntry[] }>();
+  // friendId -> unit -> running balance
+  const byFriend = new Map<string, Map<string, UnitBalance>>();
 
   for (const iou of ious ?? []) {
     const friendId = iou.creditor_id === userId ? iou.debtor_id : iou.creditor_id;
-    const entry = balanceMap.get(friendId) ?? { net: 0, ious: [] };
+    const unit = iou.unit || MONEY_UNIT;
 
-    if (iou.creditor_id === userId) {
-      // They owe me
-      entry.net += iou.amount;
-    } else {
-      // I owe them
-      entry.net -= iou.amount;
+    let units = byFriend.get(friendId);
+    if (!units) {
+      units = new Map<string, UnitBalance>();
+      byFriend.set(friendId, units);
     }
-    entry.ious.push(iou);
-    balanceMap.set(friendId, entry);
+
+    let entry = units.get(unit);
+    if (!entry) {
+      entry = { unit, unitPlural: iou.unit_plural, netAmount: 0, unsettledIous: [] };
+      units.set(unit, entry);
+    }
+
+    // Rows written before an explicit plural existed still carry the unit, so
+    // take the first plural that turns up rather than losing the override.
+    if (!entry.unitPlural && iou.unit_plural) entry.unitPlural = iou.unit_plural;
+
+    entry.netAmount += iou.creditor_id === userId ? iou.amount : -iou.amount;
+    entry.unsettledIous.push(iou);
   }
 
   const results: NetBalance[] = [];
-  for (const [friendId, entry] of balanceMap.entries()) {
+  for (const [friendId, units] of byFriend.entries()) {
     const friend = profileMap.get(friendId);
-    if (friend) {
-      results.push({
-        friend,
-        netAmount: entry.net,
-        unsettledIous: entry.ious,
+    if (!friend) continue;
+
+    const list = Array.from(units.values())
+      // Opposing IOUs can cancel a unit out entirely. Half a cent of rounding
+      // drift shouldn't then show up as a live debt.
+      .filter((u) => Math.abs(u.netAmount) >= 0.005)
+      .sort((a, b) => {
+        if (a.unit === MONEY_UNIT) return -1;
+        if (b.unit === MONEY_UNIT) return 1;
+        return Math.abs(b.netAmount) - Math.abs(a.netAmount);
       });
-    }
+
+    if (list.length > 0) results.push({ friend, units: list });
   }
 
-  return results.sort((a, b) => Math.abs(b.netAmount) - Math.abs(a.netAmount));
+  const magnitude = (b: NetBalance) =>
+    b.units.reduce((sum, u) => sum + Math.abs(u.netAmount), 0);
+
+  return results.sort((a, b) => magnitude(b) - magnitude(a));
 }

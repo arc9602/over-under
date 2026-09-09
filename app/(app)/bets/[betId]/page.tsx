@@ -79,6 +79,8 @@ export default async function BetDetailPage({ params }: Props) {
         if (options.length === 2) {
           return (
             <WagerForm
+              unit={bet.stake_unit}
+              unitPlural={bet.stake_unit_plural}
               identifier={{ betId }}
               sideALabel={bet.side_a_label}
               sideBLabel={bet.side_b_label}
@@ -93,6 +95,8 @@ export default async function BetDetailPage({ params }: Props) {
         }
         return (
           <OptionWagerForm
+            unit={bet.stake_unit}
+            unitPlural={bet.stake_unit_plural}
             identifier={{ betId }}
             options={options}
             optionTotals={Object.fromEntries(

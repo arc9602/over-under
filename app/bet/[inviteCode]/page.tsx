@@ -8,7 +8,7 @@ import { CountdownTimer } from "@/components/bet/CountdownTimer";
 import { BetInviteWager } from "@/components/bet/BetInviteWager";
 import { SplitBar } from "@/components/shared/SplitBar";
 import type { SideChoiceOption } from "@/components/bet/SideChoice";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatStake } from "@/lib/utils/formatStake";
 import { getSideTotals, getBetOptions, getOptionTotals } from "@/lib/utils/betPool";
 import type { BetParticipant, Profile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -88,9 +88,13 @@ export default async function InviteLandingPage({ params }: Props) {
   const deadlinePassed = bet.deadline != null && new Date(bet.deadline).getTime() <= Date.now();
   const canJoin = (bet.status === "open" || bet.status === "active") && !deadlinePassed;
 
+  // Bets can be staked in something other than money (migration 022).
+  const stake = (amount: number) =>
+    formatStake(amount, bet.stake_unit, bet.stake_unit_plural);
+
   const limits = [
-    bet.min_wager != null ? `min ${formatCurrency(bet.min_wager)}` : null,
-    bet.max_wager != null ? `max ${formatCurrency(bet.max_wager)}` : null,
+    bet.min_wager != null ? `min ${stake(bet.min_wager)}` : null,
+    bet.max_wager != null ? `max ${stake(bet.max_wager)}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -134,7 +138,7 @@ export default async function InviteLandingPage({ params }: Props) {
 
             <div className="flex items-baseline justify-between gap-3 pt-1">
               <div>
-                <span className="font-mono font-semibold text-lg">{formatCurrency(totalPoolAmount)}</span>
+                <span className="font-mono font-semibold text-lg">{stake(totalPoolAmount)}</span>
                 <span className="text-xs text-muted-foreground ml-2">
                   in the pool · {sideChoiceOptions.reduce((sum, o) => sum + o.count, 0)} in
                 </span>
@@ -162,6 +166,8 @@ export default async function InviteLandingPage({ params }: Props) {
 
         {canJoin ? (
           <BetInviteWager
+            unit={bet.stake_unit}
+            unitPlural={bet.stake_unit_plural}
             inviteCode={inviteCode}
             isSignedIn={Boolean(user)}
             isTwoOption={isTwoOption}
